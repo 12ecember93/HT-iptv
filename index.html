@@ -3,170 +3,175 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IPTV Clean</title>
+<title>IPTV</title>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
 <style>
-body { margin:0; background:#0f0f0f; color:#fff; font-family:sans-serif; }
+body{
+  margin:0;
+  background:#000;
+  color:#fff;
+  font-family:system-ui;
+}
 
 /* VIDEO */
-.video-container {
+.video-wrap{
   position:relative;
   width:100%;
   aspect-ratio:16/9;
   background:#000;
 }
-video { width:100%; height:100%; }
+video{
+  width:100%;
+  height:100%;
+}
 
-/* OVERLAY */
-.overlay {
+/* TOP BAR */
+.topbar{
   position:absolute;
-  top:0; left:0;
-  width:100%; height:100%;
-  display:flex;
-}
-
-/* SIDEBAR */
-.sidebar {
-  width:200px;
-  background:rgba(0,0,0,0.9);
-  overflow:auto;
-}
-.item {
+  top:0;
+  left:0;
+  width:100%;
   padding:10px;
-  border-bottom:1px solid #222;
-  text-align:center;
-  cursor:pointer;
+  background:linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+  font-weight:600;
 }
-.item img { width:100px; height:50px; object-fit:contain; }
-.item span { display:block; font-size:13px; }
 
 /* BUTTON */
-.controls {
+.fs-btn{
   position:absolute;
   bottom:15px;
   right:15px;
-  display:flex;
-  gap:10px;
-}
-.btn {
-  padding:10px 15px;
+  background:#22c55e;
+  color:#000;
+  padding:10px 16px;
   border:none;
   border-radius:8px;
-  font-weight:bold;
-  cursor:pointer;
+  font-weight:700;
 }
-.full { background:#22c55e; color:#000; }
-.exit { background:#ef4444; color:#fff; }
 
-/* LIST MOBILE */
-.container { padding:10px; }
-.grid {
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:8px;
+/* LIST */
+.list{
+  padding:10px;
 }
-.card {
-  background:#1e293b;
-  border-radius:8px;
-  padding:8px;
+
+.group{
+  margin:10px 0 5px;
+  color:#aaa;
+  font-size:13px;
+}
+
+.row{
+  display:flex;
+  gap:10px;
+  overflow-x:auto;
+}
+
+.item{
+  min-width:120px;
+  background:#111;
+  border-radius:10px;
+  padding:10px;
   text-align:center;
   cursor:pointer;
 }
-.card img { width:100%; height:60px; object-fit:contain; }
+.item img{
+  width:100%;
+  height:50px;
+  object-fit:contain;
+}
+.item span{
+  font-size:12px;
+}
 </style>
 </head>
 
 <body>
 
-<div class="video-container">
+<div class="video-wrap">
   <video id="video" playsinline muted></video>
-
-  <div class="overlay">
-    <div class="sidebar" id="sidebar"></div>
-  </div>
-
-  <div class="controls">
-    <button class="btn full" onclick="goFull()">FULL</button>
-    <button class="btn exit" onclick="exitFull()">EXIT</button>
-  </div>
+  <div class="topbar" id="title">Đang tải...</div>
+  <button class="fs-btn" onclick="goFull()">FULL</button>
 </div>
 
-<div class="container">
-  <div class="grid" id="grid"></div>
-</div>
+<div class="list" id="list"></div>
 
 <script>
-const channels = [
-  // 3 kênh ưu tiên
-  {name:"THVL1",logo:"https://static3.thvli.vn/assets/thumbnail/2025/09/12/pbe9c6gh_button_thvl1.png",url:"https://live.fptplay53.net/epzhd2/vinhlong1_vhls.smil/chunklist_b5000000.m3u8"},
-  {name:"VTV1",logo:"https://vn.xemtv.net/image/vtv1.png",url:"https://live.fptplay53.net/fnxch2/vtv1hd_abr.smil/chunklist.m3u8"},
-  {name:"VTV3",logo:"https://vn.xemtv.net/image/vtv3.png",url:"https://live.fptplay53.net/fnxch2/vtv3hd_abr.smil/chunklist.m3u8"},
-
-  // còn lại
-  {name:"VTV2",logo:"https://vn.xemtv.net/image/vtv2.png",url:"https://live.fptplay53.net/fnxch2/vtv2hd_abr.smil/chunklist.m3u8"},
-  {name:"VTV4",logo:"https://vn.xemtv.net/image/vtv4.png",url:"https://live.fptplay53.net/fnxch2/vtv4hd_abr.smil/chunklist.m3u8"},
-  {name:"VTV5",logo:"https://vn.xemtv.net/image/vtv5.png",url:"https://live-a.fptplay53.net/live/media/VTV5HD/live_hls_avc/index.m3u8"},
-  {name:"HTV7",logo:"https://vn.xemtv.net/image/htv7.png",url:"https://live.fptplay53.net/epzch2/htv7hd_abr.smil/chunklist.m3u8"},
-  {name:"HTV9",logo:"https://vn.xemtv.net/image/htv9.png",url:"https://live.fptplay53.net/epzhd1/htv9hd_vhls.smil/chunklist.m3u8"}
+const groups = [
+{
+ name:"Ưu tiên",
+ channels:[
+  {n:"THVL1",l:"https://static3.thvli.vn/assets/thumbnail/2025/09/12/pbe9c6gh_button_thvl1.png",u:"https://live.fptplay53.net/epzhd2/vinhlong1_vhls.smil/chunklist_b5000000.m3u8"},
+  {n:"VTV1",l:"https://vn.xemtv.net/image/vtv1.png",u:"https://live.fptplay53.net/fnxch2/vtv1hd_abr.smil/chunklist.m3u8"},
+  {n:"VTV3",l:"https://vn.xemtv.net/image/vtv3.png",u:"https://live.fptplay53.net/fnxch2/vtv3hd_abr.smil/chunklist.m3u8"}
+ ]
+},
+{
+ name:"Khác",
+ channels:[
+  {n:"VTV2",l:"https://vn.xemtv.net/image/vtv2.png",u:"https://live.fptplay53.net/fnxch2/vtv2hd_abr.smil/chunklist.m3u8"},
+  {n:"VTV4",l:"https://vn.xemtv.net/image/vtv4.png",u:"https://live.fptplay53.net/fnxch2/vtv4hd_abr.smil/chunklist.m3u8"},
+  {n:"VTV5",l:"https://vn.xemtv.net/image/vtv5.png",u:"https://live-a.fptplay53.net/live/media/VTV5HD/live_hls_avc/index.m3u8"},
+  {n:"HTV7",l:"https://vn.xemtv.net/image/htv7.png",u:"https://live.fptplay53.net/epzch2/htv7hd_abr.smil/chunklist.m3u8"},
+  {n:"HTV9",l:"https://vn.xemtv.net/image/htv9.png",u:"https://live.fptplay53.net/epzhd1/htv9hd_vhls.smil/chunklist.m3u8"}
+ ]
+}
 ];
 
-const video = document.getElementById("video");
+const video=document.getElementById("video");
+const title=document.getElementById("title");
 let hls;
 
 /* PLAY */
-function play(url){
-  if(video.canPlayType('application/vnd.apple.mpegurl')){
-    video.src = url;
-    video.play();
-  }else{
-    if(hls) hls.destroy();
-    hls = new Hls();
-    hls.loadSource(url);
-    hls.attachMedia(video);
-    hls.on(Hls.Events.MANIFEST_PARSED, ()=>video.play());
-  }
+function play(c){
+ title.innerText=c.n;
+
+ if(video.canPlayType('application/vnd.apple.mpegurl')){
+   video.src=c.u;
+   video.play();
+ }else{
+   if(hls) hls.destroy();
+   hls=new Hls();
+   hls.loadSource(c.u);
+   hls.attachMedia(video);
+   hls.on(Hls.Events.MANIFEST_PARSED,()=>video.play());
+ }
 }
 
-/* FULLSCREEN */
+/* FULL */
 function goFull(){
-  if(video.webkitEnterFullscreen){
-    video.webkitEnterFullscreen(); // iOS
-  }else{
-    document.querySelector('.video-container').requestFullscreen();
-  }
-}
-function exitFull(){
-  if(document.exitFullscreen){
-    document.exitFullscreen();
-  }
+ if(video.webkitEnterFullscreen){
+   video.webkitEnterFullscreen();
+ }else{
+   document.querySelector('.video-wrap').requestFullscreen();
+ }
 }
 
 /* RENDER */
-function render(){
-  const sidebar = document.getElementById("sidebar");
-  const grid = document.getElementById("grid");
+const list=document.getElementById("list");
 
-  channels.forEach(c=>{
-    // sidebar
-    let s = document.createElement("div");
-    s.className="item";
-    s.innerHTML = `<img src="${c.logo}"><span>${c.name}</span>`;
-    s.onclick = ()=>play(c.url);
-    sidebar.appendChild(s);
+groups.forEach(g=>{
+ let t=document.createElement("div");
+ t.className="group";
+ t.innerText=g.name;
+ list.appendChild(t);
 
-    // grid
-    let g = document.createElement("div");
-    g.className="card";
-    g.innerHTML = `<img src="${c.logo}"><div>${c.name}</div>`;
-    g.onclick = ()=>play(c.url);
-    grid.appendChild(g);
-  });
-}
+ let row=document.createElement("div");
+ row.className="row";
+
+ g.channels.forEach(c=>{
+   let i=document.createElement("div");
+   i.className="item";
+   i.innerHTML=`<img src="${c.l}"><span>${c.n}</span>`;
+   i.onclick=()=>play(c);
+   row.appendChild(i);
+ });
+
+ list.appendChild(row);
+});
 
 /* INIT */
-render();
-play(channels[0].url);
+play(groups[0].channels[0]);
 </script>
 
 </body>
