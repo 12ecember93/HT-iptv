@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>IPTV PRO STATS</title>
+    <title>IPTV Final Mobile</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         :root { --bg-dark: #0f0f0f; --action-blue: #0056b3; --stat-color: #00ff00; }
@@ -14,16 +14,17 @@
 
         /* Stats Layer */
         .stats-overlay {
-            position: absolute; color: var(--stat-color); font-family: monospace;
-            background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px;
-            pointer-events: none; z-index: 2147483647; transition: opacity 0.3s;
+            color: var(--stat-color); font-family: monospace;
+            background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px;
+            pointer-events: none; z-index: 2147483647;
         }
-        /* Stats ở chế độ thường (Dưới video) */
-        #web-stats { position: static; font-size: 11px; margin-top: 5px; display: inline-block; }
         
-        /* Stats ở Fullscreen (Góc trên phải, ẩn hiện theo Sidebar) */
-        #fs-stats { top: 10px; right: 10px; font-size: 10px; display: none; opacity: 0; }
-        body.is-fs .controls-overlay.active #fs-stats { display: block; opacity: 1; }
+        /* Stats Sidebar (Hiện ở đầu list) */
+        #sb-stats { font-size: 10px; margin: 10px auto; text-align: center; width: 80%; border: 1px solid #333; }
+        
+        /* Stats Fullscreen (Góc trên phải) */
+        #fs-stats { position: absolute; top: 10px; right: 10px; font-size: 10px; display: none; }
+        body.is-fs .controls-overlay.active #fs-stats { display: block; }
 
         .controls-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -33,21 +34,19 @@
         .controls-overlay.active { opacity: 1; pointer-events: auto; }
 
         .sidebar {
-            width: 170px; height: 100%; background: rgba(10,10,10,0.98);
+            width: 140px; height: 100%; background: rgba(10,10,10,0.98);
             transform: translateX(-100%); transition: transform 0.2s ease;
-            border-right: 1px solid #333; overflow-y: auto;
+            border-right: 1px solid #333; overflow-y: auto; overscroll-behavior: contain;
         }
         .controls-overlay.active .sidebar { transform: translateX(0); }
         
-        .side-item { padding: 12px 10px; border-bottom: 1px solid #222; text-align: center; cursor: pointer; }
-        .side-item img { width: 90px; height: 45px; object-fit: contain; }
-        .side-item span { display: block; font-size: 11px; font-weight: bold; margin-top: 4px; }
+        .side-item { padding: 10px; border-bottom: 1px solid #222; text-align: center; cursor: pointer; }
+        .side-item img { width: 100%; height: 45px; object-fit: contain; pointer-events: none; }
 
         .btn-group { position: fixed; bottom: 20px; right: 20px; display: flex; gap: 10px; z-index: 2147483647; }
         .action-btn {
             background: var(--action-blue); color: white; border: 1.5px solid #fff;
-            padding: 12px 18px; border-radius: 50px; font-weight: bold; font-size: 13px;
-            cursor: pointer;
+            padding: 12px 18px; border-radius: 50px; font-weight: bold; font-size: 13px; cursor: pointer;
         }
         body.is-fs .reload-btn, body.is-fs #btn-enter { display: none; }
         #btn-exit { display: none; position: absolute; bottom: 20px; right: 20px; }
@@ -55,13 +54,13 @@
 
         .info { padding: 10px 15px; border-bottom: 1px solid #333; }
         .info h2 { margin: 0; font-size: 16px; color: #ffcc00; }
+        #web-stats { font-size: 11px; margin-top: 5px; display: inline-block; }
 
-        .mobile-container { padding: 10px; padding-bottom: 80px; }
+        .mobile-container { padding: 10px; padding-bottom: 80px; overflow-y: auto; height: calc(100vh - 250px); }
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
         .grid-item { background: #1a1a1a; padding: 10px; border-radius: 8px; text-align: center; }
         
         @media (min-width: 992px) { 
-            .mobile-container { display: none; } 
             #video-viewport { max-width: 80vw; margin: 15px auto; border-radius: 8px; }
         }
     </style>
@@ -73,7 +72,9 @@
     <div id="fs-stats" class="stats-overlay">0 Mbps | 0 fps</div>
     
     <div class="controls-overlay" id="ui-overlay">
-        <div class="sidebar" id="side-list" onclick="event.stopPropagation()"></div>
+        <div class="sidebar" id="side-list" onclick="event.stopPropagation()">
+            <div id="sb-stats" class="stats-overlay">Đang tải...</div>
+        </div>
         <button id="btn-exit" class="action-btn" onclick="handleFS(false, event)">THOÁT</button>
     </div>
 </div>
@@ -110,7 +111,7 @@
     ];
 
     const v = document.getElementById('main-video'), view = document.getElementById('video-viewport');
-    const overlay = document.getElementById('ui-overlay'), wStats = document.getElementById('web-stats'), fStats = document.getElementById('fs-stats');
+    const overlay = document.getElementById('ui-overlay'), wStats = document.getElementById('web-stats'), fStats = document.getElementById('fs-stats'), sStats = document.getElementById('sb-stats');
     let hls = new Hls(), timer, lastTime = 0, frameCount = 0, fps = 0;
 
     function showUI() {
@@ -124,6 +125,7 @@
         if(enter) {
             if(view.requestFullscreen) view.requestFullscreen();
             else if(view.webkitRequestFullscreen) view.webkitRequestFullscreen();
+            if(screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{});
         } else {
             if(document.exitFullscreen) document.exitFullscreen();
             else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
@@ -131,32 +133,26 @@
     }
 
     document.addEventListener('fullscreenchange', () => document.body.classList.toggle('is-fs', !!document.fullscreenElement));
-    document.addEventListener('webkitfullscreenchange', () => document.body.classList.toggle('is-fs', !!document.webkitIsFullScreen));
 
-    // Đo FPS thực tế
     function updateFPS() {
         if (!v.paused) {
             frameCount++;
             const now = performance.now();
-            if (now - lastTime >= 1000) {
-                fps = frameCount;
-                frameCount = 0;
-                lastTime = now;
-            }
+            if (now - lastTime >= 1000) { fps = frameCount; frameCount = 0; lastTime = now; }
         }
         requestAnimationFrame(updateFPS);
     }
     updateFPS();
 
-    // Cập nhật thông số gọn gàng
     setInterval(() => {
         if (v.readyState > 0) {
             const level = hls.levels[hls.currentLevel] || {};
             const mbps = level.bitrate ? (level.bitrate / 1000000).toFixed(1) + " Mbps" : "Auto";
             const res = v.videoWidth + "x" + v.videoHeight;
-            
-            wStats.innerText = `${res} | ${mbps} | ${fps} fps`;
-            fStats.innerText = `${mbps} | ${fps} fps`;
+            const combined = `${mbps} | ${fps} fps`;
+            wStats.innerText = `${res} | ${combined}`;
+            fStats.innerText = combined;
+            sStats.innerText = combined;
         }
     }, 1500);
 
@@ -164,7 +160,11 @@
         document.getElementById('now-playing').innerText = c.name;
         hls.destroy(); hls = new Hls();
         hls.loadSource(c.url); hls.attachMedia(v);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => v.play());
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            v.play();
+            // Ép ngang khi chọn kênh trong Sidebar nếu đang Fullscreen
+            if(document.fullscreenElement && screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{});
+        });
         overlay.classList.remove('active');
     }
 
@@ -172,11 +172,11 @@
         const side = document.getElementById('side-list'), grid = document.getElementById('main-grid');
         channels.forEach(c => {
             const sItem = document.createElement('div'); sItem.className = 'side-item';
-            sItem.innerHTML = `<img src="${c.logo}"><span>${c.short}</span>`;
+            sItem.innerHTML = `<img src="${c.logo}">`; // Bỏ text
             sItem.onclick = () => play(c); side.appendChild(sItem);
 
             const gItem = document.createElement('div'); gItem.className = 'grid-item';
-            gItem.innerHTML = `<img src="${c.logo}" style="width:100%"><p style="font-size:9px;margin:3px 0 0;">${c.name}</p>`;
+            gItem.innerHTML = `<img src="${c.logo}" style="width:100%">`;
             gItem.onclick = () => play(c); grid.appendChild(gItem);
         });
         play(channels.find(c => c.short === "VTV1") || channels[0]);
