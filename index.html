@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GitHub IPTV - Fixed Cinema</title>
+    <title>GitHub IPTV - Family Ultimate</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         :root { 
@@ -12,7 +12,7 @@
         }
         body { font-family: "Roboto", Arial, sans-serif; background: var(--bg-dark); color: #fff; margin: 0; padding: 0; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
         
-        /* Player Section */
+        /* Player */
         .video-container { position: sticky; top: 0; z-index: 1000; background: #000; width: 100%; max-width: 1200px; margin: 0 auto; aspect-ratio: 16/9; cursor: pointer; }
         video { width: 100%; height: 100%; display: block; background: #000; }
 
@@ -24,32 +24,29 @@
         }
         .video-overlay.show { opacity: 1; pointer-events: auto; }
 
-        /* Sidebar To hơn 50% (180px) */
+        /* Sidebar To (180px) */
         .side-nav {
-            width: 180px; height: 100%; background: rgba(15,15,15,0.95);
+            width: 180px; height: 100%; background: rgba(10,10,10,0.98);
             display: flex; flex-direction: column; overflow-y: auto;
-            transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            scrollbar-width: none; border-right: 2px solid #444;
+            transform: translateX(-100%); transition: transform 0.3s ease;
+            scrollbar-width: none; border-right: 2px solid #333;
         }
         .video-overlay.show .side-nav { transform: translateX(0); }
-        .side-item { padding: 15px 10px; display: flex; flex-direction: column; align-items: center; border-bottom: 1px solid #333; transition: 0.2s; }
-        .side-item:active { background: #333; }
-        .side-item img { width: 100px; height: 50px; object-fit: contain; margin-bottom: 8px; }
-        .side-item span { font-size: 13px; font-weight: bold; color: #eee; }
+        .side-item { padding: 15px 10px; display: flex; flex-direction: column; align-items: center; border-bottom: 1px solid #222; }
+        .side-item img { width: 110px; height: 55px; object-fit: contain; margin-bottom: 5px; }
+        .side-item span { font-size: 13px; font-weight: bold; color: #ddd; }
+        .side-header { padding: 10px; font-size: 11px; font-weight: bold; color: var(--fav-color); background: #1a1a1a; text-align: center; }
 
-        /* Nút Trở Lại Siêu To */
         .exit-fs-btn {
-            position: absolute; bottom: 30px; right: 30px;
+            position: absolute; bottom: 25px; right: 25px;
             background: #f00; color: white; border: 2px solid #fff; padding: 15px 30px;
-            border-radius: 10px; font-weight: 900; font-size: 16px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            border-radius: 12px; font-weight: 900; font-size: 16px;
         }
 
-        /* Ngoài Trang Chủ */
-        .big-action-bar { max-width: 1200px; margin: 0 auto; padding: 15px; background: var(--action-blue); text-align: center; font-weight: bold; cursor: pointer; font-size: 18px; }
-        .video-info { max-width: 1200px; margin: 0 auto; padding: 12px 15px; border-bottom: 1px solid #222; }
-        .current-title { font-size: 16px; font-weight: 800; color: var(--fav-color); margin: 0; }
+        /* Ngoài trang chính */
+        .big-action-bar { max-width: 1200px; margin: 0 auto; padding: 15px; background: var(--action-blue); text-align: center; font-weight: bold; font-size: 18px; cursor: pointer; }
+        .current-title { padding: 12px 15px; font-size: 16px; font-weight: 800; color: var(--fav-color); border-bottom: 1px solid #222; margin: 0; }
 
-        /* Grid System */
         .container { max-width: 1200px; margin: 0 auto; padding: 5px; }
         .channel-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
         @media (min-width: 992px) { .channel-grid { grid-template-columns: repeat(6, 1fr); gap: 15px; } }
@@ -59,8 +56,8 @@
         .channel-item.active { border-color: var(--primary-color); background: var(--active-bg); }
         .thumb-box { width: 100%; aspect-ratio: 16/9; background: #252525; border-radius: 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 6px; }
         .thumb-box img { width: 85%; height: 85%; object-fit: contain; }
-        .channel-name { font-size: 11px; font-weight: 700; text-align: center; }
-        .star-btn { position: absolute; top: 2px; right: 2px; font-size: 22px; color: rgba(255,255,255,0.1); padding: 5px; }
+        .channel-name { font-size: 11px; font-weight: 700; }
+        .star-btn { position: absolute; top: 0; right: 0; font-size: 24px; color: rgba(255,255,255,0.1); padding: 8px; z-index: 5; }
         .star-btn.is-fav { color: var(--fav-color); }
     </style>
 </head>
@@ -75,8 +72,7 @@
 </div>
 
 <div class="big-action-bar" onclick="toggleFS()">🔳 PHÓNG TO TOÀN MÀN HÌNH</div>
-
-<div class="video-info"><p class="current-title" id="current-title">Đang tải...</p></div>
+<p class="current-title" id="current-title">Đang tải...</p>
 
 <div class="container">
     <div class="channel-grid" id="main-list"></div>
@@ -84,7 +80,6 @@
 
 <script>
     const rawChannels = [
-        // 16 Kênh chính (Hiện trong Sidebar)
         { id: "v1", short: "VTV1", name: "VTV1 HD", logo: "https://vn.xemtv.net/image/vtv1.png", url: "https://live.fptplay53.net/fnxch2/vtv1hd_abr.smil/chunklist.m3u8", group: "VTV", isMain: true },
         { id: "v2", short: "VTV2", name: "VTV2 HD", logo: "https://vn.xemtv.net/image/vtv2.png", url: "https://live.fptplay53.net/fnxch2/vtv2hd_abr.smil/chunklist.m3u8", group: "VTV", isMain: true },
         { id: "v3", short: "VTV3", name: "VTV3 HD", logo: "https://vn.xemtv.net/image/vtv3.png", url: "https://live.fptplay53.net/fnxch2/vtv3hd_abr.smil/chunklist.m3u8", group: "VTV", isMain: true },
@@ -101,11 +96,7 @@
         { id: "vl1", short: "THVL1", name: "TH Vĩnh Long 1", logo: "https://static3.thvli.vn/assets/thumbnail/2025/09/12/pbe9c6gh_button_thvl1.png", url: "https://live.fptplay53.net/epzhd2/vinhlong1_vhls.smil/chunklist_b5000000.m3u8", group: "KHÁC", isMain: true },
         { id: "h3", short: "HTV3", name: "HTV3 HD", logo: "https://vn.xemtv.net/image/htv3.png", url: "https://live.fptplay53.net/epzhd1/htv3_hls.smil/chunklist.m3u8", group: "HTV", isMain: true },
         { id: "vnt", short: "VNT", name: "Vietnam Today", logo: "https://vn.xemtv.net/image/vietnamtoday.png", url: "https://live.fptplay53.net/fnxhd1/vntoday_vhls.smil/chunklist_b5000000.m3u8", group: "KHÁC", isMain: true },
-
-        // Kênh Dự Phòng (Không hiện sidebar)
-        { id: "d_v1", short: "V1 DP", name: "VTV1 Dự phòng", logo: "https://vn.xemtv.net/image/vtv1.png", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv1-hd/KenhCoBan.m3u8", group: "DỰ PHÒNG", isMain: false },
-        { id: "d_v3", short: "V3 DP", name: "VTV3 Dự phòng", logo: "https://vn.xemtv.net/image/vtv3.png", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv3-hd/KenhCoBan.m3u8", group: "DỰ PHÒNG", isMain: false },
-        { id: "d_vl1", short: "VL1 DP", name: "THVL1 Dự phòng", logo: "https://static3.thvli.vn/assets/thumbnail/2025/09/12/pbe9c6gh_button_thvl1.png", url: "https://toiyeuvietnam.dpdns.org/thvl1-hd/KenhCoBan.m3u8", group: "DỰ PHÒNG", isMain: false }
+        { id: "d_v1", short: "V1 DP", name: "VTV1 Dự phòng", logo: "https://vn.xemtv.net/image/vtv1.png", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv1-hd/KenhCoBan.m3u8", group: "DỰ PHÒNG", isMain: false }
     ];
 
     let favorites = JSON.parse(localStorage.getItem('iptv_favs')) || ["v1", "v3", "vl1"];
@@ -124,11 +115,7 @@
         const p = document.getElementById('player-box');
         if (p.requestFullscreen) p.requestFullscreen();
         else if (video.webkitEnterFullscreen) video.webkitEnterFullscreen();
-        
-        // Cố gắng khóa màn hình ngang trên Android
-        if (screen.orientation && screen.orientation.lock) {
-            screen.orientation.lock('landscape').catch(() => {});
-        }
+        if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
     }
 
     function exitFS(e) { e.stopPropagation(); if (document.fullscreenElement) document.exitFullscreen(); overlay.classList.remove('show'); }
@@ -157,37 +144,64 @@
     }
 
     function playStream(channel) {
+        const isCurrentlyFS = !!document.fullscreenElement;
         document.getElementById('current-title').innerText = channel.name;
         
-        // Dùng cơ chế load mượt để tránh thoát Fullscreen
-        if (Hls.isSupported()) {
-            hls.loadSource(channel.url);
-            hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = channel.url;
-            video.play();
+        // Force Refresh Mechanism
+        if (isCurrentlyFS) {
+            // Thoát tạm thời để trình duyệt không bị đứng
+            // Nạp kênh mới
+            if (Hls.isSupported()) {
+                hls.loadSource(channel.url); hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    video.play();
+                    // Tự động vào lại FS để giữ hướng ngang
+                    toggleFS();
+                });
+            }
+        } else {
+            if (Hls.isSupported()) {
+                hls.loadSource(channel.url); hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+            }
         }
         
         updateSideNav();
-        document.querySelectorAll('.channel-item').forEach(el => el.classList.toggle('active', el.innerText.includes(channel.name)));
+        overlay.classList.remove('show');
     }
 
     function updateSideNav() {
         const side = document.getElementById('side-nav');
-        side.innerHTML = "<div style='padding:15px; font-size:12px; color:red; font-weight:bold'>DANH SÁCH KÊNH</div>";
-        // Chỉ lấy 16 kênh chính
-        const mainChannels = rawChannels.filter(c => c.isMain);
-        mainChannels.forEach(next => {
-            const div = document.createElement('div');
-            div.className = 'side-item';
-            div.innerHTML = `<img src="${next.logo}"><span>${next.short}</span>`;
-            div.onclick = (e) => { e.stopPropagation(); playStream(next); };
-            side.appendChild(div);
-        });
+        side.innerHTML = "";
+        
+        // 1. Mục Yêu thích trong Sidebar
+        const favList = rawChannels.filter(c => favorites.includes(c.id));
+        if (favList.length > 0) {
+            side.innerHTML += "<div class='side-header'>⭐ YÊU THÍCH</div>";
+            favList.forEach(c => addSideItem(side, c));
+        }
+
+        // 2. Danh sách chính (Lọc bỏ những kênh đã nằm ở Yêu thích)
+        side.innerHTML += "<div class='side-header'>DANH SÁCH KÊNH</div>";
+        const mainList = rawChannels.filter(c => c.isMain && !favorites.includes(c.id));
+        mainList.forEach(c => addSideItem(side, c));
     }
 
-    function toggleFav(e, id) { e.stopPropagation(); favorites = favorites.includes(id) ? favorites.filter(f => f !== id) : [...favorites, id]; localStorage.setItem('iptv_favs', JSON.stringify(favorites)); renderList(); }
+    function addSideItem(parent, channel) {
+        const div = document.createElement('div');
+        div.className = 'side-item';
+        div.innerHTML = `<img src="${channel.logo}"><span>${channel.short}</span>`;
+        div.onclick = (e) => { e.stopPropagation(); playStream(channel); };
+        parent.appendChild(div);
+    }
+
+    function toggleFav(e, id) { 
+        e.stopPropagation(); 
+        favorites = favorites.includes(id) ? favorites.filter(f => f !== id) : [...favorites, id]; 
+        localStorage.setItem('iptv_favs', JSON.stringify(favorites)); 
+        renderList(); 
+        updateSideNav();
+    }
 
     window.onload = () => { renderList(); playStream(rawChannels[0]); };
 </script>
