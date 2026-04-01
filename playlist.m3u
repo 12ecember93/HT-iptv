@@ -1,45 +1,49 @@
 #EXTM3U
-#EXTINF:-1 tvg-logo="https://vn.xemtv.net/image/vtv1.png",VTV1 FPT
+
+#EXTGROUP:Nguồn FPT
+#EXTINF:-1 tvg-name="VTV1 FPT",VTV1 FPT
 https://live.fptplay53.net/fnxch2/vtv1hd_abr.smil/chunklist.m3u8
-#EXTINF:-1,VTV1 HD
-https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv1-hd/KenhCoBan.m3u8
-#EXTINF:-1 tvg-logo="https://vn.xemtv.net/image/vtv2.png",VTV2 FPT
+#EXTINF:-1 tvg-name="VTV2 FPT",VTV2 FPT
 https://live.fptplay53.net/fnxch2/vtv2hd_abr.smil/chunklist.m3u8
-#EXTINF:-1,VTV2 HD
-https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv2-hd/KenhCoBan.m3u8
-#EXTINF:-1 tvg-logo="https://vn.xemtv.net/image/vtv3.png",VTV3 FPT
+#EXTINF:-1 tvg-name="VTV3 FPT",VTV3 FPT
 https://live.fptplay53.net/fnxch2/vtv3hd_abr.smil/chunklist.m3u8
-#EXTINF:-1,VTV3 HD
-https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv3-hd/KenhCoBan.m3u8
-#EXTINF:-1, THVL1 FPT
-https://live.fptplay53.net/epzch2/vinhlong1_abr.smil/chunklist_b4200000.m3u8
-#EXTINF:-1,THVL1
-https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vinh-long-1/KenhCoBan.m3u8
-#EXTINF:-1 tvg-logo="https://vn.xemtv.net/image/vtv4.png",VTV4 FPT
+#EXTINF:-1 tvg-name="VTV4 FPT",VTV4 FPT
 https://live.fptplay53.net/fnxch2/vtv4hd_abr.smil/chunklist.m3u8
-#EXTINF:-1,VTV4 HD
-https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv4-hd/KenhCoBan.m3u8
-#EXTINF:-1 tvg-logo="https://vn.xemtv.net/image/vtv5.png",VTV5 FPT
+#EXTINF:-1 tvg-name="VTV5 FPT",VTV5 FPT
 https://live-a.fptplay53.net/live/media/VTV5HD/live_hls_avc/index.m3u8
-#EXTINF:-1,VTV5 HD
+#EXTINF:-1 tvg-name="THVL1 FPT",THVL1 FPT
+https://live.fptplay53.net/epzch2/vinhlong1_abr.smil/chunklist_b4200000.m3u8
+
+#EXTGROUP:Nguồn Dự Phòng
+#EXTINF:-1 tvg-name="VTV1 HD",VTV1 HD
+https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv1-hd/KenhCoBan.m3u8
+#EXTINF:-1 tvg-name="VTV2 HD",VTV2 HD
+https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv2-hd/KenhCoBan.m3u8
+#EXTINF:-1 tvg-name="VTV3 HD",VTV3 HD
+https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv3-hd/KenhCoBan.m3u8
+#EXTINF:-1 tvg-name="VTV4 HD",VTV4 HD
+https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv4-hd/KenhCoBan.m3u8
+#EXTINF:-1 tvg-name="VTV5 HD",VTV5 HD
 https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv5-hd/KenhCoBan.m3u8
-#EXTINF:-1,VTV7 HD
+#EXTINF:-1 tvg-name="VTV7 HD",VTV7 HD
 https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv7-hd/KenhCoBan.m3u8
-#EXTINF:-1,VTV8 HD
+#EXTINF:-1 tvg-name="VTV8 HD",VTV8 HD
 https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv8-hd/KenhCoBan.m3u8
-#EXTINF:-1,VTV9 HD
+#EXTINF:-1 tvg-name="VTV9 HD",VTV9 HD
 https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv9-hd/KenhCoBan.m3u8
-#EXTINF:-1,VTV 10
+#EXTINF:-1 tvg-name="VTV 10",VTV 10
 https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv10/KenhCoBan.m3u8
-#EXTINF:-1,HTV1
+#EXTINF:-1 tvg-name="HTV1",HTV1
 https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/htv1/KenhCoBan.m3u8
-#EXTINF:-1,HTV2
+#EXTINF:-1 tvg-name="HTV2",HTV2
 https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/htv2/KenhCoBan.m3u8
-#EXTINF:-1,HTV3
+#EXTINF:-1 tvg-name="HTV3",HTV3
 https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/htv3/KenhCoBan.m3u8
-#EXTINF:-1,HTV4
+#EXTINF:-1 tvg-name="HTV4",HTV4
 https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/htv4/KenhCoBan.m3u8
-#EXTINF:-1,HTV7 HD
+#EXTINF:-1 tvg-name="HTV7 HD",HTV7 HD
 https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/htv7-hd/KenhCoBan.m3u8
-#EXTINF:-1,HTV9 HD
+#EXTINF:-1 tvg-name="HTV9 HD",HTV9 HD
 https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/htv9-hd/KenhCoBan.m3u8
+#EXTINF:-1 tvg-name="THVL1",THVL1
+https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vinh-long-1/KenhCoBan.m3u8
