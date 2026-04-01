@@ -3,85 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GitHub IPTV - Pro Desktop & Mobile</title>
+    <title>GitHub IPTV - Ultimate Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         :root { 
-            --bg-dark: #0f0f0f; 
-            --text-main: #fff;
-            --text-sub: #aaa;
-            --primary-color: #f00; 
-            --active-bg: rgba(255, 255, 255, 0.1);
-            --header-bg: #222;
+            --bg-dark: #0f0f0f; --text-main: #fff; --text-sub: #aaa;
+            --primary-color: #f00; --fav-color: #ffcc00; --active-bg: rgba(255, 255, 255, 0.1);
         }
-        
-        body { 
-            font-family: "Roboto", Arial, sans-serif; 
-            background: var(--bg-dark); 
-            color: var(--text-main); 
-            margin: 0; padding: 0;
-        }
-        
-        /* Player cố định - Giới hạn chiều cao trên Desktop */
-        .video-player { 
-            position: sticky; top: 0; z-index: 1000; 
-            background: #000; width: 100%; max-width: 1000px; 
-            margin: 0 auto; aspect-ratio: 16/9;
-        }
+        body { font-family: "Roboto", Arial, sans-serif; background: var(--bg-dark); color: var(--text-main); margin: 0; padding: 0; }
+        .video-player { position: sticky; top: 0; z-index: 1000; background: #000; width: 100%; max-width: 1000px; margin: 0 auto; aspect-ratio: 16/9; }
         video { width: 100%; height: 100%; display: block; }
-
-        .fullscreen-btn {
-            position: absolute; bottom: 10px; right: 10px;
-            background: rgba(0,0,0,0.7); color: white; border: none;
-            padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer;
-        }
-        
-        .video-info { max-width: 1000px; margin: 0 auto; padding: 15px; border-bottom: 2px solid var(--header-bg); }
-        .current-title { font-size: 20px; font-weight: 800; margin: 0; color: #fff; }
-
-        /* Container chính */
+        .fullscreen-btn { position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+        .video-info { max-width: 1000px; margin: 0 auto; padding: 15px; border-bottom: 2px solid #222; }
+        .current-title { font-size: 20px; font-weight: 800; margin: 0; }
         .container { max-width: 1000px; margin: 0 auto; padding-bottom: 50px; }
-
-        /* Chia cột danh sách: 1 cột cho mobile, 2 cột cho desktop */
-        .channel-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-        }
-        @media (min-width: 768px) {
-            .channel-grid { grid-template-columns: 1fr 1fr; gap: 0 20px; }
-        }
-
-        .group-header { 
-            grid-column: 1 / -1; /* Luôn chiếm hết chiều ngang */
-            padding: 20px 15px 10px 15px; 
-            font-size: 16px; font-weight: bold; color: #4db8ff;
-            text-transform: uppercase; letter-spacing: 1px;
-            background: var(--bg-dark);
-        }
-        .group-header.fav { color: #ffcc00; } /* Màu vàng cho nhóm Sao */
-
-        .channel-item { 
-            display: flex; align-items: center; 
-            padding: 10px 15px; cursor: pointer;
-            border-radius: 8px; margin: 2px 5px;
-            transition: 0.2s;
-        }
+        .channel-grid { display: grid; grid-template-columns: 1fr; }
+        @media (min-width: 768px) { .channel-grid { grid-template-columns: 1fr 1fr; gap: 0 10px; } }
+        .group-header { grid-column: 1 / -1; padding: 20px 15px 10px 15px; font-size: 14px; font-weight: bold; color: #4db8ff; text-transform: uppercase; background: var(--bg-dark); }
+        .fav-header { color: var(--fav-color); }
+        .channel-item { display: flex; align-items: center; padding: 10px 15px; cursor: pointer; border-radius: 8px; margin: 2px 5px; position: relative; }
         .channel-item:hover { background: #1a1a1a; }
         .channel-item.active { background: var(--active-bg); }
-        
-        .thumb { 
-            width: 80px; height: 45px; 
-            background: #2a2a2a; border-radius: 6px;
-            margin-right: 12px; display: flex;
-            align-items: center; justify-content: center;
-            font-size: 11px; color: #666; font-weight: bold;
-            flex-shrink: 0; border: 1px solid #333;
-        }
+        .thumb { width: 70px; height: 40px; background: #2a2a2a; border-radius: 4px; margin-right: 12px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #555; flex-shrink: 0; border: 1px solid #333; }
         .active .thumb { border-color: var(--primary-color); color: var(--primary-color); }
-
         .meta { flex: 1; overflow: hidden; }
         .name { font-size: 15px; font-weight: 700; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .active .name { color: var(--primary-color); }
+        .star-btn { padding: 10px; font-size: 22px; color: #333; cursor: pointer; z-index: 10; transition: 0.2s; }
+        .star-btn.is-fav { color: var(--fav-color); }
     </style>
 </head>
 <body>
@@ -91,64 +40,101 @@
     <button class="fullscreen-btn" onclick="goFullScreen()">🔳 TOÀN MÀN HÌNH</button>
 </div>
 
-<div class="video-info">
-    <p class="current-title" id="current-title">Đang tải...</p>
-</div>
+<div class="video-info"><p class="current-title" id="current-title">Đang chọn kênh...</p></div>
 
 <div class="container">
-    <div class="channel-grid" id="main-list">
-        </div>
+    <div class="channel-grid" id="main-list"></div>
 </div>
 
 <script>
-    const channels = [
-        // NHÓM SAO (ƯU TIÊN)
-        { name: "VTV1 FPT", url: "https://live.fptplay53.net/fnxch2/vtv1hd_abr.smil/chunklist.m3u8", group: "⭐ KÊNH HAY XEM" },
-        { name: "VTV3 FPT", url: "https://live.fptplay53.net/fnxch2/vtv3hd_abr.smil/chunklist.m3u8", group: "⭐ KÊNH HAY XEM" },
-        { name: "Vĩnh Long 1", url: "https://live.fptplay53.net/epzch2/vinhlong1_abr.smil/chunklist.m3u8", group: "⭐ KÊNH HAY XEM" },
+    const rawChannels = [
+        // --- NGUỒN FPT ---
+        { id: "f_v1", name: "VTV1 FPT", url: "https://live.fptplay53.net/fnxch2/vtv1hd_abr.smil/chunklist.m3u8", group: "VTV (FPT)" },
+        { id: "f_v2", name: "VTV2 FPT", url: "https://live.fptplay53.net/fnxch2/vtv2hd_abr.smil/chunklist.m3u8", group: "VTV (FPT)" },
+        { id: "f_v3", name: "VTV3 FPT", url: "https://live.fptplay53.net/fnxch2/vtv3hd_abr.smil/chunklist.m3u8", group: "VTV (FPT)" },
+        { id: "f_v4", name: "VTV4 FPT", url: "https://live.fptplay53.net/fnxch2/vtv4hd_abr.smil/chunklist.m3u8", group: "VTV (FPT)" },
+        { id: "f_v5", name: "VTV5 FPT", url: "https://live.fptplay53.net/epzch2/vtv5hd_abr.smil/chunklist.m3u8", group: "VTV (FPT)" },
+        { id: "f_v5tnb", name: "VTV5 TNB", url: "https://live.fptplay53.net/fnxhd1/vtv5tnb_vhls.smil/chunklist.m3u8", group: "VTV (FPT)" },
+        { id: "f_v7", name: "VTV7 FPT", url: "https://live.fptplay53.net/fnxhd1/vtv7hd_vhls.smil/chunklist.m3u8", group: "VTV (FPT)" },
+        { id: "f_v8", name: "VTV8 FPT", url: "https://live.fptplay53.net/epzhd1/vtv8hd_vhls.smil/chunklist.m3u8", group: "VTV (FPT)" },
+        { id: "f_v9", name: "VTV9 FPT", url: "https://live.fptplay53.net/epzch2/vtv9hd_abr.smil/chunklist.m3u8", group: "VTV (FPT)" },
+        { id: "f_h1", name: "HTV1 FPT", url: "https://live.fptplay53.net/epzhd1/htv1_hls.smil/chunklist.m3u8", group: "HTV (FPT)" },
+        { id: "f_h2", name: "HTV2 FPT", url: "https://live.fptplay53.net/epzhd1/htv2hd_vhls.smil/chunklist.m3u8", group: "HTV (FPT)" },
+        { id: "f_h3", name: "HTV3 FPT", url: "https://live.fptplay53.net/epzhd1/htv3_hls.smil/chunklist.m3u8", group: "HTV (FPT)" },
+        { id: "f_h7", name: "HTV7 FPT", url: "https://live.fptplay53.net/epzch2/htv7hd_abr.smil/chunklist.m3u8", group: "HTV (FPT)" },
+        { id: "f_h9", name: "HTV9 FPT", url: "https://live.fptplay53.net/epzhd1/htv9hd_vhls.smil/chunklist.m3u8", group: "HTV (FPT)" },
+        { id: "f_vl1", name: "Vĩnh Long 1", url: "https://live.fptplay53.net/epzch2/vinhlong1_abr.smil/chunklist.m3u8", group: "THVL & KHÁC" },
+        { id: "f_vnt", name: "VN Today", url: "https://live.fptplay53.net/fnxhd1/vntoday_vhls.smil/chunklist.m3u8", group: "THVL & KHÁC" },
 
-        // NHÓM VTV
-        { name: "VTV1 FPT", url: "https://live.fptplay53.net/fnxch2/vtv1hd_abr.smil/chunklist.m3u8", group: "VTV" },
-        { name: "VTV2 FPT", url: "https://live.fptplay53.net/fnxch2/vtv2hd_abr.smil/chunklist.m3u8", group: "VTV" },
-        { name: "VTV3 FPT", url: "https://live.fptplay53.net/fnxch2/vtv3hd_abr.smil/chunklist.m3u8", group: "VTV" },
-        { name: "VTV4 FPT", url: "https://live.fptplay53.net/fnxch2/vtv4hd_abr.smil/chunklist.m3u8", group: "VTV" },
-        { name: "VTV5 FPT", url: "https://live-a.fptplay53.net/live/media/VTV5HD/live_hls_avc/index.m3u8", group: "VTV" },
-        { name: "VTV5 TNB", url: "https://live.fptplay53.net/fnxhd1/vtv5tnb_vhls.smil/chunklist.m3u8", group: "VTV" },
-        { name: "VTV7 FPT", url: "https://live.fptplay53.net/fnxhd1/vtv7hd_vhls.smil/chunklist.m3u8", group: "VTV" },
-        { name: "VTV8 FPT", url: "https://live.fptplay53.net/epzhd1/vtv8hd_vhls.smil/chunklist.m3u8", group: "VTV" },
-        { name: "VTV9 FPT", url: "https://live.fptplay53.net/epzch2/vtv9hd_abr.smil/chunklist.m3u8", group: "VTV" },
-        
-        // NHÓM HTV
-        { name: "HTV1 FPT", url: "https://live.fptplay53.net/epzhd1/htv1_hls.smil/chunklist.m3u8", group: "HTV" },
-        { name: "HTV2 FPT", url: "https://live.fptplay53.net/epzhd1/htv2hd_vhls.smil/chunklist.m3u8", group: "HTV" },
-        { name: "HTV3 FPT", url: "https://live.fptplay53.net/epzhd1/htv3_hls.smil/chunklist.m3u8", group: "HTV" },
-        { name: "HTV7 FPT", url: "https://live.fptplay53.net/epzch2/htv7hd_abr.smil/chunklist.m3u8", group: "HTV" },
-        { name: "HTV9 FPT", url: "https://live.fptplay53.net/epzhd1/htv9hd_vhls.smil/chunklist.m3u8", group: "HTV" },
-
-        // NHÓM DỰ PHÒNG
-        { name: "VN Today", url: "https://live.fptplay53.net/fnxhd1/vntoday_vhls.smil/chunklist.m3u8", group: "KHÁC" },
-        { name: "VTV1 HD (DP)", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv1-hd/KenhCoBan.m3u8", group: "DỰ PHÒNG (KHÔNG WEB)" },
-        { name: "VTV3 HD (DP)", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv3-hd/KenhCoBan.m3u8", group: "DỰ PHÒNG (KHÔNG WEB)" }
+        // --- NGUỒN DỰ PHÒNG (Dùng App TV) ---
+        { id: "d_v1", name: "VTV1 HD", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv1-hd/KenhCoBan.m3u8", group: "NGUỒN DỰ PHÒNG (TV)" },
+        { id: "d_v2", name: "VTV2 HD", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv2-hd/KenhCoBan.m3u8", group: "NGUỒN DỰ PHÒNG (TV)" },
+        { id: "d_v3", name: "VTV3 HD", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv3-hd/KenhCoBan.m3u8", group: "NGUỒN DỰ PHÒNG (TV)" },
+        { id: "d_v4", name: "VTV4 HD", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv4-hd/KenhCoBan.m3u8", group: "NGUỒN DỰ PHÒNG (TV)" },
+        { id: "d_v5", name: "VTV5 HD", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv5-hd/KenhCoBan.m3u8", group: "NGUỒN DỰ PHÒNG (TV)" },
+        { id: "d_h7", name: "HTV7 HD", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/htv7-hd/KenhCoBan.m3u8", group: "NGUỒN DỰ PHÒNG (TV)" },
+        { id: "d_h9", name: "HTV9 HD", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/htv9-hd/KenhCoBan.m3u8", group: "NGUỒN DỰ PHÒNG (TV)" }
     ];
 
+    let favorites = JSON.parse(localStorage.getItem('iptv_favs')) || ["f_v1", "f_v3", "f_vl1"];
     const video = document.getElementById('video');
     const currentTitle = document.getElementById('current-title');
     let hls = new Hls();
 
+    function renderList() {
+        const mainList = document.getElementById('main-list');
+        mainList.innerHTML = "";
+        
+        // Render Nhóm Yêu Thích ⭐
+        if (favorites.length > 0) {
+            renderGroup("⭐ Kênh Hay Xem", rawChannels.filter(c => favorites.includes(c.id)), true);
+        }
+
+        // Render Các Nhóm Gốc
+        const groups = [...new Set(rawChannels.map(c => c.group))];
+        groups.forEach(g => renderGroup(g, rawChannels.filter(c => c.group === g), false));
+    }
+
+    function renderGroup(title, list, isFav) {
+        const mainList = document.getElementById('main-list');
+        const header = document.createElement('div');
+        header.className = `group-header ${isFav ? 'fav-header' : ''}`;
+        header.innerText = title;
+        mainList.appendChild(header);
+
+        list.forEach(channel => {
+            const isStarred = favorites.includes(channel.id);
+            const item = document.createElement('div');
+            item.className = 'channel-item';
+            item.innerHTML = `
+                <div class="thumb">LIVE</div>
+                <div class="meta"><p class="name">${channel.name}</p></div>
+                <div class="star-btn ${isStarred ? 'is-fav' : ''}" onclick="toggleFav(event, '${channel.id}')">★</div>
+            `;
+            item.onclick = () => playStream(channel, item);
+            mainList.appendChild(item);
+        });
+    }
+
+    function toggleFav(e, id) {
+        e.stopPropagation();
+        if (favorites.includes(id)) favorites = favorites.filter(f => f !== id);
+        else favorites.push(id);
+        localStorage.setItem('iptv_favs', JSON.stringify(favorites));
+        renderList();
+    }
+
     function playStream(channel, element) {
         currentTitle.innerText = channel.name;
         document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
-        element.classList.add('active');
+        if(element) element.classList.add('active');
 
         if (Hls.isSupported()) {
-            hls.destroy();
-            hls = new Hls();
-            hls.loadSource(channel.url);
-            hls.attachMedia(video);
+            hls.destroy(); hls = new Hls();
+            hls.loadSource(channel.url); hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = channel.url;
-            video.play();
+            video.src = channel.url; video.play();
         }
     }
 
@@ -157,36 +143,7 @@
         else if (video.webkitEnterFullscreen) video.webkitEnterFullscreen();
     }
 
-    // Render danh sách
-    const mainList = document.getElementById('main-list');
-    const groups = [...new Set(channels.map(c => c.group))];
-
-    groups.forEach(groupName => {
-        const header = document.createElement('div');
-        header.className = 'group-header' + (groupName.includes('⭐') ? ' fav' : '');
-        header.innerText = groupName;
-        mainList.appendChild(header);
-
-        channels.filter(c => c.group === groupName).forEach(channel => {
-            const item = document.createElement('div');
-            item.className = 'channel-item';
-            item.innerHTML = `
-                <div class="thumb">LIVE</div>
-                <div class="meta"><p class="name">${channel.name}</p></div>
-            `;
-            item.onclick = () => {
-                playStream(channel, item);
-                window.scrollTo({top: 0, behavior: 'smooth'});
-            };
-            mainList.appendChild(item);
-        });
-    });
-
-    window.onload = () => {
-        const firstItem = document.querySelector('.channel-item');
-        if(firstItem) playStream(channels[0], firstItem);
-    };
+    window.onload = () => { renderList(); playStream(rawChannels[0]); };
 </script>
-
 </body>
 </html>
