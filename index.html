@@ -3,44 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GitHub IPTV - Ultimate Pro</title>
+    <title>GitHub IPTV - Visual Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         :root { 
             --bg-dark: #0f0f0f; --text-main: #fff; --text-sub: #aaa;
-            --primary-color: #f00; --fav-color: #ffcc00; --active-bg: rgba(255, 255, 255, 0.1);
+            --primary-color: #f00; --fav-color: #ffcc00; --active-bg: rgba(255, 255, 255, 0.15);
         }
-        body { font-family: "Roboto", Arial, sans-serif; background: var(--bg-dark); color: var(--text-main); margin: 0; padding: 0; }
-        .video-player { position: sticky; top: 0; z-index: 1000; background: #000; width: 100%; max-width: 1000px; margin: 0 auto; aspect-ratio: 16/9; }
+        body { font-family: "Roboto", Arial, sans-serif; background: var(--bg-dark); color: var(--text-main); margin: 0; padding: 0; overflow-x: hidden; }
+        
+        /* Player Section */
+        .video-container { position: sticky; top: 0; z-index: 1000; background: #000; width: 100%; max-width: 1000px; margin: 0 auto; aspect-ratio: 16/9; }
         video { width: 100%; height: 100%; display: block; }
-        .fullscreen-btn { position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; }
-        .video-info { max-width: 1000px; margin: 0 auto; padding: 15px; border-bottom: 2px solid #222; }
-        .current-title { font-size: 20px; font-weight: 800; margin: 0; }
-        .container { max-width: 1000px; margin: 0 auto; padding-bottom: 50px; }
-        .channel-grid { display: grid; grid-template-columns: 1fr; }
-        @media (min-width: 768px) { .channel-grid { grid-template-columns: 1fr 1fr; gap: 0 10px; } }
-        .group-header { grid-column: 1 / -1; padding: 20px 15px 10px 15px; font-size: 14px; font-weight: bold; color: #4db8ff; text-transform: uppercase; background: var(--bg-dark); }
+
+        .video-controls {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; justify-content: space-between; padding: 15px; box-sizing: border-box;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent, rgba(0,0,0,0.6));
+            opacity: 0; transition: opacity 0.3s; z-index: 1001; pointer-events: none;
+        }
+        .video-container:active .video-controls, .video-container:hover .video-controls { opacity: 1; pointer-events: auto; }
+        .ctrl-btn { background: rgba(0,0,0,0.7); color: white; border: 1px solid #444; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 13px; }
+
+        .video-info { max-width: 1000px; margin: 0 auto; padding: 12px 15px; border-bottom: 2px solid #222; }
+        .current-title { font-size: 18px; font-weight: 800; margin: 0; }
+
+        /* Grid System */
+        .container { max-width: 1000px; margin: 0 auto; padding: 5px; }
+        .channel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 5px; }
+        
+        .group-header { grid-column: 1 / -1; padding: 15px 10px 5px 10px; font-size: 13px; font-weight: bold; color: #4db8ff; text-transform: uppercase; }
         .fav-header { color: var(--fav-color); }
-        .channel-item { display: flex; align-items: center; padding: 10px 15px; cursor: pointer; border-radius: 8px; margin: 2px 5px; position: relative; }
-        .channel-item:hover { background: #1a1a1a; }
-        .channel-item.active { background: var(--active-bg); }
-        .thumb { width: 70px; height: 40px; background: #2a2a2a; border-radius: 4px; margin-right: 12px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #555; flex-shrink: 0; border: 1px solid #333; }
-        .active .thumb { border-color: var(--primary-color); color: var(--primary-color); }
-        .meta { flex: 1; overflow: hidden; }
-        .name { font-size: 15px; font-weight: 700; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .active .name { color: var(--primary-color); }
-        .star-btn { padding: 10px; font-size: 22px; color: #333; cursor: pointer; z-index: 10; transition: 0.2s; }
-        .star-btn.is-fav { color: var(--fav-color); }
+
+        /* Card Design */
+        .channel-item { 
+            background: #1a1a1a; border-radius: 10px; padding: 10px; 
+            display: flex; flex-direction: column; align-items: center; 
+            cursor: pointer; position: relative; border: 1px solid #333; transition: 0.2s;
+        }
+        .channel-item.active { background: var(--active-bg); border-color: var(--primary-color); box-shadow: 0 0 10px rgba(255,0,0,0.2); }
+        
+        .thumb-box { 
+            width: 100%; aspect-ratio: 16/9; background: #252525; border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; margin-bottom: 8px; position: relative;
+        }
+        .thumb-box img { width: 70%; height: 70%; object-fit: contain; }
+        /* Dự phòng nếu ko có logo */
+        .thumb-box span { font-size: 18px; font-weight: 900; color: #555; }
+
+        .channel-name { font-size: 13px; font-weight: 700; width: 90%; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .star-btn { position: absolute; top: 5px; right: 5px; font-size: 20px; color: rgba(255,255,255,0.2); z-index: 5; }
+        .star-btn.is-fav { color: var(--fav-color); opacity: 1; }
     </style>
 </head>
 <body>
 
-<div class="video-player">
+<div class="video-container" id="player-box">
     <video id="video" autoplay playsinline></video>
-    <button class="fullscreen-btn" onclick="goFullScreen()">🔳 TOÀN MÀN HÌNH</button>
+    <div class="video-controls">
+        <button class="ctrl-btn" onclick="exitFS()">✕ Thoát</button>
+        <button class="ctrl-btn" onclick="scrollToList()">☰ Danh sách</button>
+    </div>
 </div>
 
-<div class="video-info"><p class="current-title" id="current-title">Đang chọn kênh...</p></div>
+<div class="video-info"><p class="current-title" id="current-title">Đang tải...</p></div>
 
 <div class="container">
     <div class="channel-grid" id="main-list"></div>
@@ -48,32 +76,26 @@
 
 <script>
     const rawChannels = [
-        // --- NGUỒN FPT ---
-        { id: "f_v1", name: "VTV1 FPT", url: "https://live.fptplay53.net/fnxch2/vtv1hd_abr.smil/chunklist.m3u8", group: "VTV (FPT)" },
-        { id: "f_v2", name: "VTV2 FPT", url: "https://live.fptplay53.net/fnxch2/vtv2hd_abr.smil/chunklist.m3u8", group: "VTV (FPT)" },
-        { id: "f_v3", name: "VTV3 FPT", url: "https://live.fptplay53.net/fnxch2/vtv3hd_abr.smil/chunklist.m3u8", group: "VTV (FPT)" },
-        { id: "f_v4", name: "VTV4 FPT", url: "https://live.fptplay53.net/fnxch2/vtv4hd_abr.smil/chunklist.m3u8", group: "VTV (FPT)" },
-        { id: "f_v5", name: "VTV5 FPT", url: "https://live.fptplay53.net/epzch2/vtv5hd_abr.smil/chunklist.m3u8", group: "VTV (FPT)" },
-        { id: "f_v5tnb", name: "VTV5 TNB", url: "https://live.fptplay53.net/fnxhd1/vtv5tnb_vhls.smil/chunklist.m3u8", group: "VTV (FPT)" },
-        { id: "f_v7", name: "VTV7 FPT", url: "https://live.fptplay53.net/fnxhd1/vtv7hd_vhls.smil/chunklist.m3u8", group: "VTV (FPT)" },
-        { id: "f_v8", name: "VTV8 FPT", url: "https://live.fptplay53.net/epzhd1/vtv8hd_vhls.smil/chunklist.m3u8", group: "VTV (FPT)" },
-        { id: "f_v9", name: "VTV9 FPT", url: "https://live.fptplay53.net/epzch2/vtv9hd_abr.smil/chunklist.m3u8", group: "VTV (FPT)" },
-        { id: "f_h1", name: "HTV1 FPT", url: "https://live.fptplay53.net/epzhd1/htv1_hls.smil/chunklist.m3u8", group: "HTV (FPT)" },
-        { id: "f_h2", name: "HTV2 FPT", url: "https://live.fptplay53.net/epzhd1/htv2hd_vhls.smil/chunklist.m3u8", group: "HTV (FPT)" },
-        { id: "f_h3", name: "HTV3 FPT", url: "https://live.fptplay53.net/epzhd1/htv3_hls.smil/chunklist.m3u8", group: "HTV (FPT)" },
-        { id: "f_h7", name: "HTV7 FPT", url: "https://live.fptplay53.net/epzch2/htv7hd_abr.smil/chunklist.m3u8", group: "HTV (FPT)" },
-        { id: "f_h9", name: "HTV9 FPT", url: "https://live.fptplay53.net/epzhd1/htv9hd_vhls.smil/chunklist.m3u8", group: "HTV (FPT)" },
-        { id: "f_vl1", name: "Vĩnh Long 1", url: "https://live.fptplay53.net/epzch2/vinhlong1_abr.smil/chunklist.m3u8", group: "THVL & KHÁC" },
-        { id: "f_vnt", name: "VN Today", url: "https://live.fptplay53.net/fnxhd1/vntoday_vhls.smil/chunklist.m3u8", group: "THVL & KHÁC" },
+        // NHÓM FPT CÓ LOGO
+        { id: "f_vl1", short: "THVL1", name: "TH Vĩnh Long 1", logo: "https://vn.xemtv.net/image/vinhlong1.png", url: "https://live.fptplay53.net/epzhd2/vinhlong1_vhls.smil/chunklist_b5000000.m3u8", group: "TRUYỀN HÌNH FPT" },
+        { id: "f_v1", short: "VTV1", name: "VTV1 HD", logo: "https://vn.xemtv.net/image/vtv1.png", url: "https://live.fptplay53.net/fnxch2/vtv1hd_abr.smil/chunklist.m3u8", group: "TRUYỀN HÌNH FPT" },
+        { id: "f_v2", short: "VTV2", name: "VTV2 HD", logo: "https://vn.xemtv.net/image/vtv2.png", url: "https://live.fptplay53.net/fnxch2/vtv2hd_abr.smil/chunklist.m3u8", group: "TRUYỀN HÌNH FPT" },
+        { id: "f_v3", short: "VTV3", name: "VTV3 HD", logo: "https://vn.xemtv.net/image/vtv3.png", url: "https://live.fptplay53.net/fnxch2/vtv3hd_abr.smil/chunklist.m3u8", group: "TRUYỀN HÌNH FPT" },
+        { id: "f_v4", short: "VTV4", name: "VTV4 HD", logo: "https://vn.xemtv.net/image/vtv4.png", url: "https://live.fptplay53.net/fnxch2/vtv4hd_abr.smil/chunklist.m3u8", group: "TRUYỀN HÌNH FPT" },
+        { id: "f_v5", short: "VTV5", name: "VTV5 HD", logo: "https://vn.xemtv.net/image/vtv5.png", url: "https://live-a.fptplay53.net/live/media/VTV5HD/live_hls_avc/index.m3u8", group: "TRUYỀN HÌNH FPT" },
+        { id: "f_vtct", short: "VTV CT", name: "VTV Cần Thơ", logo: "https://vn.xemtv.net/image/vtvcantho.png", url: "https://live.fptplay53.net/fnxch2/vtvcantho_abr.smil/chunklist_b4200000.m3u8", group: "TRUYỀN HÌNH FPT" },
+        { id: "f_v7", short: "VTV7", name: "VTV7 HD", logo: "https://vn.xemtv.net/image/vtv7.png", url: "https://live.fptplay53.net/fnxhd1/vtv7hd_vhls.smil/chunklist_b5000000.m3u8", group: "TRUYỀN HÌNH FPT" },
+        { id: "f_v8", short: "VTV8", name: "VTV8 HD", logo: "https://vn.xemtv.net/image/vtv8.png", url: "https://live.fptplay53.net/epzhd1/vtv8hd_vhls.smil/chunklist.m3u8", group: "TRUYỀN HÌNH FPT" },
+        { id: "f_vnt", short: "VNT", name: "Vietnam Today", logo: "https://vn.xemtv.net/image/vietnamtoday.png", url: "https://live.fptplay53.net/fnxhd1/vntoday_vhls.smil/chunklist_b5000000.m3u8", group: "TRUYỀN HÌNH FPT" },
+        { id: "f_h1", short: "HTV1", name: "HTV1 HD", logo: "https://vn.xemtv.net/image/htv1.png", url: "https://live.fptplay53.net/epzhd1/htv1_hls.smil/chunklist.m3u8", group: "TRUYỀN HÌNH FPT" },
+        { id: "f_h2", short: "HTV2", name: "HTV2 HD", logo: "https://vn.xemtv.net/image/htv2.png", url: "https://live.fptplay53.net/epzhd1/htv2hd_vhls.smil/chunklist.m3u8", group: "TRUYỀN HÌNH FPT" },
+        { id: "f_h3", short: "HTV3", name: "HTV3 HD", logo: "https://vn.xemtv.net/image/htv3.png", url: "https://live.fptplay53.net/epzhd1/htv3_hls.smil/chunklist.m3u8", group: "TRUYỀN HÌNH FPT" },
+        { id: "f_h4", short: "HTV4", name: "HTV4 HD", logo: "https://vn.xemtv.net/image/htv4.png", url: "https://live.fptplay53.net/epzhd1/htv4_hls.smil/chunklist.m3u8", group: "TRUYỀN HÌNH FPT" },
+        { id: "f_h9", short: "HTV9", name: "HTV9 HD", logo: "https://vn.xemtv.net/image/htv9.png", url: "https://live.fptplay53.net/epzhd1/htv9hd_vhls.smil/chunklist.m3u8", group: "TRUYỀN HÌNH FPT" },
 
-        // --- NGUỒN DỰ PHÒNG (Dùng App TV) ---
-        { id: "d_v1", name: "VTV1 HD", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv1-hd/KenhCoBan.m3u8", group: "NGUỒN DỰ PHÒNG (TV)" },
-        { id: "d_v2", name: "VTV2 HD", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv2-hd/KenhCoBan.m3u8", group: "NGUỒN DỰ PHÒNG (TV)" },
-        { id: "d_v3", name: "VTV3 HD", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv3-hd/KenhCoBan.m3u8", group: "NGUỒN DỰ PHÒNG (TV)" },
-        { id: "d_v4", name: "VTV4 HD", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv4-hd/KenhCoBan.m3u8", group: "NGUỒN DỰ PHÒNG (TV)" },
-        { id: "d_v5", name: "VTV5 HD", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv5-hd/KenhCoBan.m3u8", group: "NGUỒN DỰ PHÒNG (TV)" },
-        { id: "d_h7", name: "HTV7 HD", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/htv7-hd/KenhCoBan.m3u8", group: "NGUỒN DỰ PHÒNG (TV)" },
-        { id: "d_h9", name: "HTV9 HD", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/htv9-hd/KenhCoBan.m3u8", group: "NGUỒN DỰ PHÒNG (TV)" }
+        // DỰ PHÒNG CŨNG GẮN LOGO LUÔN CHO ĐẸP
+        { id: "d_v9", short: "VTV9", name: "VTV9 HD (DP)", logo: "https://vn.xemtv.net/image/vtv9.png", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv9-hd/KenhCoBan.m3u8", group: "DỰ PHÒNG (KHÔNG WEB)" },
+        { id: "d_v1", short: "V1 DP", name: "VTV1 HD (Dự phòng)", logo: "https://vn.xemtv.net/image/vtv1.png", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv1-hd/KenhCoBan.m3u8", group: "DỰ PHÒNG (KHÔNG WEB)" }
     ];
 
     let favorites = JSON.parse(localStorage.getItem('iptv_favs')) || ["f_v1", "f_v3", "f_vl1"];
@@ -84,13 +106,7 @@
     function renderList() {
         const mainList = document.getElementById('main-list');
         mainList.innerHTML = "";
-        
-        // Render Nhóm Yêu Thích ⭐
-        if (favorites.length > 0) {
-            renderGroup("⭐ Kênh Hay Xem", rawChannels.filter(c => favorites.includes(c.id)), true);
-        }
-
-        // Render Các Nhóm Gốc
+        if (favorites.length > 0) renderGroup("⭐ Yêu Thích", rawChannels.filter(c => favorites.includes(c.id)), true);
         const groups = [...new Set(rawChannels.map(c => c.group))];
         groups.forEach(g => renderGroup(g, rawChannels.filter(c => c.group === g), false));
     }
@@ -105,10 +121,14 @@
         list.forEach(channel => {
             const isStarred = favorites.includes(channel.id);
             const item = document.createElement('div');
-            item.className = 'channel-item';
+            item.className = 'channel-item' + (video.src === channel.url ? ' active' : '');
+            
+            // Logic hiển thị logo hoặc chữ viết tắt
+            const thumbContent = channel.logo ? `<img src="${channel.logo}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><span style="display:none">${channel.short}</span>` : `<span>${channel.short}</span>`;
+
             item.innerHTML = `
-                <div class="thumb">LIVE</div>
-                <div class="meta"><p class="name">${channel.name}</p></div>
+                <div class="thumb-box">${thumbContent}</div>
+                <div class="channel-name">${channel.name}</div>
                 <div class="star-btn ${isStarred ? 'is-fav' : ''}" onclick="toggleFav(event, '${channel.id}')">★</div>
             `;
             item.onclick = () => playStream(channel, item);
@@ -133,14 +153,21 @@
             hls.destroy(); hls = new Hls();
             hls.loadSource(channel.url); hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        } else {
             video.src = channel.url; video.play();
         }
     }
 
-    function goFullScreen() {
-        if (video.requestFullscreen) video.requestFullscreen();
-        else if (video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+    function exitFS() {
+        if (document.fullscreenElement) document.exitFullscreen();
+        else window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function scrollToList() {
+        if (document.fullscreenElement) document.exitFullscreen();
+        setTimeout(() => {
+            window.scrollTo({ top: video.offsetTop + 120, behavior: 'smooth' });
+        }, 100);
     }
 
     window.onload = () => { renderList(); playStream(rawChannels[0]); };
