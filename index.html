@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>IPTV</title>
+    <title>GitHub IPTV - Fullscreen Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         :root { 
@@ -95,4 +95,109 @@
         { id: "h2", short: "HTV2", name: "HTV2 HD", logo: "https://vn.xemtv.net/image/htv2.png", url: "https://live.fptplay53.net/epzhd1/htv2hd_vhls.smil/chunklist.m3u8", group: "HTV" },
         { id: "h7", short: "HTV7", name: "HTV7 HD", logo: "https://vn.xemtv.net/image/htv7.png", url: "https://live.fptplay53.net/epzch2/htv7hd_abr.smil/chunklist.m3u8", group: "HTV" },
         { id: "h9", short: "HTV9", name: "HTV9 HD", logo: "https://vn.xemtv.net/image/htv9.png", url: "https://live.fptplay53.net/epzhd1/htv9hd_vhls.smil/chunklist.m3u8", group: "HTV" },
-        { id: "vl1", short: "THVL1", name: "TH Vĩnh Long 1", logo: "https://vn.xemtv
+        { id: "vl1", short: "THVL1", name: "TH Vĩnh Long 1", logo: "https://vn.xemtv.net/image/vinhlong1.png", url: "https://live.fptplay53.net/epzhd2/vinhlong1_vhls.smil/chunklist_b5000000.m3u8", group: "KHÁC" },
+        { id: "vnt", short: "VNT", name: "Vietnam Today", logo: "https://vn.xemtv.net/image/vietnamtoday.png", url: "https://live.fptplay53.net/fnxhd1/vntoday_vhls.smil/chunklist_b5000000.m3u8", group: "KHÁC" },
+        { id: "d_v1", short: "V1 DP", name: "VTV1 Dự phòng", logo: "https://vn.xemtv.net/image/vtv1.png", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv1-hd/KenhCoBan.m3u8", group: "DỰ PHÒNG" },
+        { id: "d_v3", short: "V3 DP", name: "VTV3 Dự phòng", logo: "https://vn.xemtv.net/image/vtv3.png", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv3-hd/KenhCoBan.m3u8", group: "DỰ PHÒNG" },
+        { id: "d_v5", short: "V5 DP", name: "VTV5 Dự phòng", logo: "https://vn.xemtv.net/image/vtv5.png", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv5-hd/KenhCoBan.m3u8", group: "DỰ PHÒNG" },
+        { id: "d_vl1", short: "VL1 DP", name: "THVL1 Dự phòng", logo: "https://vn.xemtv.net/image/vinhlong1.png", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/thvl1-hd/KenhCoBan.m3u8", group: "DỰ PHÒNG" }
+    ];
+
+    let favorites = JSON.parse(localStorage.getItem('iptv_favs')) || ["v1", "v3", "vl1"];
+    const video = document.getElementById('video');
+    const overlay = document.getElementById('overlay');
+    let hls = new Hls();
+    let hideTimeout;
+
+    function showOverlay() {
+        overlay.classList.add('show');
+        clearTimeout(hideTimeout);
+        hideTimeout = setTimeout(() => overlay.classList.remove('show'), 5000);
+    }
+
+    function exitFS(e) {
+        e.stopPropagation();
+        if (document.fullscreenElement) document.exitFullscreen();
+        overlay.classList.remove('show');
+    }
+
+    function toggleFS() {
+        const p = document.getElementById('player-box');
+        if (p.requestFullscreen) p.requestFullscreen();
+        else if (video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+    }
+
+    function renderList() {
+        const mainList = document.getElementById('main-list');
+        mainList.innerHTML = "";
+        if (favorites.length > 0) renderGroup("⭐ YÊU THÍCH", rawChannels.filter(c => favorites.includes(c.id)), true);
+        ["VTV", "HTV", "KHÁC", "DỰ PHÒNG"].forEach(g => renderGroup(g, rawChannels.filter(c => c.group === g), false));
+    }
+
+    function renderGroup(title, list, isFav) {
+        const mainList = document.getElementById('main-list');
+        if(list.length === 0) return;
+        const header = document.createElement('div');
+        header.className = `group-header ${isFav ? 'fav-header' : ''}`;
+        header.innerText = title;
+        mainList.appendChild(header);
+
+        list.forEach(channel => {
+            const item = document.createElement('div');
+            item.className = 'channel-item' + (video.src === channel.url ? ' active' : '');
+            item.innerHTML = `
+                <div class="thumb-box"><img src="${channel.logo}"></div>
+                <div class="channel-name">${channel.name}</div>
+                <div class="star-btn ${favorites.includes(channel.id) ? 'is-fav' : ''}" onclick="toggleFav(event, '${channel.id}')">★</div>
+            `;
+            item.onclick = () => playStream(channel, item);
+            mainList.appendChild(item);
+        });
+    }
+
+    function playStream(channel, element) {
+        document.getElementById('current-title').innerText = channel.name;
+        document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
+        if(element) element.classList.add('active');
+        
+        // Cập nhật nguồn video mà không làm ảnh hưởng đến Fullscreen
+        if (Hls.isSupported()) {
+            hls.destroy(); hls = new Hls();
+            hls.loadSource(channel.url); hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+        } else { 
+            video.src = channel.url; video.play(); 
+        }
+        
+        updateQuickNav(channel);
+        overlay.classList.remove('show');
+    }
+
+    function updateQuickNav(curr) {
+        const nav = document.getElementById('quick-nav');
+        nav.innerHTML = "";
+        const idx = rawChannels.findIndex(c => c.id === curr.id);
+        rawChannels.slice(idx + 1, idx + 5).forEach(next => {
+            const btn = document.createElement('button');
+            btn.className = 'quick-btn';
+            btn.innerText = ">> " + next.short;
+            btn.onclick = (e) => { 
+                e.stopPropagation(); 
+                playStream(next); 
+            };
+            nav.appendChild(btn);
+        });
+    }
+
+    function toggleFav(e, id) {
+        e.stopPropagation();
+        if (favorites.includes(id)) favorites = favorites.filter(f => f !== id);
+        else favorites.push(id);
+        localStorage.setItem('iptv_favs', JSON.stringify(favorites));
+        renderList();
+    }
+
+    window.onload = () => { renderList(); playStream(rawChannels[0]); };
+</script>
+</body>
+</html>
