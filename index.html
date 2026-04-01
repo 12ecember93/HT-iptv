@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>IPTV Fixed Order</title>
+    <title>IPTV Auto Fullscreen</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
-        :root { --bg-dark: #000; --action-blue: #0056b3; --fav-color: #ffcc00; }
-        body { font-family: sans-serif; background: #0f0f0f; color: #fff; margin: 0; padding: 0; overflow-x: hidden; }
+        :root { --bg-dark: #0f0f0f; --action-blue: #0056b3; --fav-color: #ffcc00; }
+        body { font-family: sans-serif; background: var(--bg-dark); color: #fff; margin: 0; padding: 0; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
         
         #video-viewport {
             position: relative; width: 100%; aspect-ratio: 16/9; background: #000;
@@ -27,35 +27,31 @@
             transform: translateX(-100%); transition: transform 0.3s ease;
             border-right: 1px solid #333; pointer-events: auto;
             overflow-y: auto; -webkit-overflow-scrolling: touch; 
-            display: flex; flex-direction: column;
         }
         .controls-overlay.active .sidebar { transform: translateX(0); }
         
-        .side-item { padding: 12px; border-bottom: 1px solid #222; text-align: center; cursor: pointer; flex-shrink: 0; }
-        .side-item img { width: 100px; height: 55px; object-fit: contain; pointer-events: none; }
-        .side-item span { display: block; font-size: 12px; font-weight: bold; margin-top: 5px; pointer-events: none; }
+        .side-item { padding: 15px 10px; border-bottom: 1px solid #222; text-align: center; cursor: pointer; }
+        .side-item img { width: 110px; height: 55px; object-fit: contain; }
+        .side-item span { display: block; font-size: 12px; font-weight: bold; margin-top: 5px; }
 
-        .exit-btn {
-            position: absolute; top: 20px; right: 20px;
-            background: var(--action-blue); color: white; border: 2px solid #fff;
-            padding: 12px 20px; border-radius: 8px; font-weight: bold;
-            display: none; pointer-events: auto; z-index: 2147483647;
-        }
-        body.is-fullscreen .exit-btn { display: block; }
-
-        .float-fs-btn {
+        /* Nút chung cho cả 2 chế độ */
+        .action-btn {
             position: fixed; bottom: 20px; right: 20px;
             background: var(--action-blue); color: white; border: 2px solid #fff;
-            padding: 18px 25px; border-radius: 50px; font-weight: bold; font-size: 16px;
-            z-index: 99; cursor: pointer;
+            padding: 18px 25px; border-radius: 50px; font-weight: bold; font-size: 15px;
+            z-index: 2147483647; cursor: pointer; pointer-events: auto;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
-        body.is-fullscreen .float-fs-btn { display: none; }
+
+        /* Khi ở trong Viewport Fullscreen, nút thoát phải nằm trong đó */
+        #video-viewport .action-btn { position: absolute; }
 
         .info { padding: 15px; border-bottom: 1px solid #222; }
         .info h2 { margin: 0; font-size: 18px; color: var(--fav-color); }
 
         .mobile-container { padding: 10px; padding-bottom: 100px; }
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        
         @media (min-width: 992px) { 
             .mobile-container { display: none; } 
             #video-viewport { max-width: 85vw; margin: 20px auto; border-radius: 12px; }
@@ -65,17 +61,18 @@
         .grid-item p { font-size: 11px; margin-top: 5px; font-weight: bold; }
     </style>
 </head>
-<body>
+<body id="main-body">
 
 <div id="video-viewport" onclick="showUI()">
     <video id="main-video" autoplay playsinline></video>
+    
     <div class="controls-overlay" id="ui-overlay">
         <div class="sidebar" id="side-list" onclick="event.stopPropagation()"></div>
-        <button class="exit-btn" onclick="toggleFS(event)">THOÁT TOÀN MÀN HÌNH</button>
+        <button id="btn-exit" class="action-btn" style="display:none;" onclick="toggleFS(event)">THOÁT TOÀN MÀN HÌNH</button>
     </div>
 </div>
 
-<button class="float-fs-btn" id="btn-fs" onclick="toggleFS(event)">XEM TOÀN MÀN HÌNH</button>
+<button id="btn-enter" class="action-btn" onclick="toggleFS(event)">XEM TOÀN MÀN HÌNH</button>
 
 <div class="info">
     <h2 id="now-playing">Đang tải...</h2>
@@ -87,34 +84,23 @@
 
 <script>
     const channels = [
-        // THVL Lên đầu
         { name: "Vĩnh Long 1", short: "THVL1", logo: "https://vn.xemtv.net/image/thvl1.png", url: "https://live.fptplay53.net/epzhd2/vinhlong1_vhls.smil/chunklist_b5000000.m3u8" },
-        
-        // Dàn VTV
         { name: "VTV1 HD", short: "VTV1", logo: "https://vn.xemtv.net/image/vtv1.png", url: "https://live.fptplay53.net/fnxch2/vtv1hd_abr.smil/chunklist.m3u8" },
         { name: "VTV2 HD", short: "VTV2", logo: "https://vn.xemtv.net/image/vtv2.png", url: "https://live.fptplay53.net/fnxch2/vtv2hd_abr.smil/chunklist.m3u8" },
         { name: "VTV3 HD", short: "VTV3", logo: "https://vn.xemtv.net/image/vtv3.png", url: "https://live.fptplay53.net/fnxch2/vtv3hd_abr.smil/chunklist.m3u8" },
         { name: "VTV4 HD", short: "VTV4", logo: "https://vn.xemtv.net/image/vtv4.png", url: "https://live.fptplay53.net/fnxch2/vtv4hd_abr.smil/chunklist.m3u8" },
         { name: "VTV5 HD", short: "VTV5", logo: "https://vn.xemtv.net/image/vtv5.png", url: "https://live-a.fptplay53.net/live/media/VTV5HD/live_hls_avc/index.m3u8" },
         { name: "VTV Cần Thơ", short: "VTV CT", logo: "https://vn.xemtv.net/image/vtvcantho.png", url: "https://live.fptplay53.net/fnxch2/vtvcantho_abr.smil/chunklist_b4200000.m3u8" },
-        { name: "VTV7 HD", short: "VTV7", logo: "https://vn.xemtv.net/image/vtv7.png", url: "https://live.fptplay53.net/fnxhd1/vtv7hd_vhls.smil/chunklist_b5000000.m3u8" },
-        { name: "VTV8 HD", short: "VTV8", logo: "https://vn.xemtv.net/image/vtv8.png", url: "https://live.fptplay53.net/epzhd1/vtv8hd_vhls.smil/chunklist.m3u8" },
-        { name: "VTV9 HD", short: "VTV9", logo: "https://vn.xemtv.net/image/vtv9.png", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv9-hd/KenhCoBan.m3u8" },
-        
-        // Dàn HTV
         { name: "HTV7 HD", short: "HTV7", logo: "https://vn.xemtv.net/image/htv7.png", url: "https://live.fptplay53.net/epzch2/htv7hd_abr.smil/chunklist.m3u8" },
-        { name: "HTV9 HD", short: "HTV9", logo: "https://vn.xemtv.net/image/htv9.png", url: "https://vn.xemtv.net/image/htv9.png", url: "https://live.fptplay53.net/epzhd1/htv9hd_vhls.smil/chunklist.m3u8" },
-        { name: "HTV1 HD", short: "HTV1", logo: "https://vn.xemtv.net/image/htv1.png", url: "https://live.fptplay53.net/epzhd1/htv1_hls.smil/chunklist.m3u8" },
-        { name: "HTV2 HD", short: "HTV2", logo: "https://vn.xemtv.net/image/htv2.png", url: "https://live.fptplay53.net/epzhd1/htv2hd_vhls.smil/chunklist.m3u8" },
-        { name: "HTV3 HD", short: "HTV3", logo: "https://vn.xemtv.net/image/htv3.png", url: "https://live.fptplay53.net/epzhd1/htv3_hls.smil/chunklist.m3u8" },
-        
-        // Khác
+        { name: "HTV9 HD", short: "HTV9", logo: "https://vn.xemtv.net/image/htv9.png", url: "https://live.fptplay53.net/epzhd1/htv9hd_vhls.smil/chunklist.m3u8" },
         { name: "Vietnam Today", short: "VNT", logo: "https://vn.xemtv.net/image/vietnamtoday.png", url: "https://live.fptplay53.net/fnxhd1/vntoday_vhls.smil/chunklist_b5000000.m3u8" }
     ];
 
     const v = document.getElementById('main-video');
     const view = document.getElementById('video-viewport');
     const overlay = document.getElementById('ui-overlay');
+    const btnEnter = document.getElementById('btn-enter');
+    const btnExit = document.getElementById('btn-exit');
     let hls = new Hls();
     let timer;
 
@@ -136,16 +122,40 @@
         }
     }
 
-    document.addEventListener('fullscreenchange', () => document.body.classList.toggle('is-fullscreen', !!document.fullscreenElement));
-    document.addEventListener('webkitfullscreenchange', () => document.body.classList.toggle('is-fullscreen', !!document.webkitIsFullScreen));
+    // Theo dõi trạng thái FS để đổi nút
+    const updateButtons = () => {
+        const isFS = !!(document.fullscreenElement || document.webkitFullscreenElement);
+        btnEnter.style.display = isFS ? 'none' : 'block';
+        btnExit.style.display = isFS ? 'block' : 'none';
+    };
+    document.addEventListener('fullscreenchange', updateButtons);
+    document.addEventListener('webkitfullscreenchange', updateButtons);
 
-    function play(c, forceFS) {
+    async function play(c, shouldAutoFS) {
+        // Nếu đang FS thì thoát ra trước để reset luồng
+        if (document.fullscreenElement || document.webkitFullscreenElement) {
+            if (document.exitFullscreen) await document.exitFullscreen();
+            else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+        }
+
         document.getElementById('now-playing').innerText = c.name;
+        
+        const startStream = () => {
+            v.play();
+            // Sau khi video chạy, tự động vào lại Fullscreen nếu được yêu cầu
+            if (shouldAutoFS) {
+                setTimeout(() => {
+                    if (view.requestFullscreen) view.requestFullscreen();
+                    else if (view.webkitRequestFullscreen) view.webkitRequestFullscreen();
+                }, 300);
+            }
+        };
+
         if (Hls.isSupported()) {
             hls.loadSource(c.url); hls.attachMedia(v);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => { v.play(); if(forceFS) toggleFS(); });
+            hls.on(Hls.Events.MANIFEST_PARSED, startStream);
         } else {
-            v.src = c.url; v.play(); if(forceFS) toggleFS();
+            v.src = c.url; startStream();
         }
         overlay.classList.remove('active');
     }
