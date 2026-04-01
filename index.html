@@ -3,44 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>IPTV Tech Minimal</title>
+    <title>IPTV PRO STATS</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         :root { --bg-dark: #0f0f0f; --action-blue: #0056b3; --stat-color: #00ff00; }
-        body { font-family: sans-serif; background: var(--bg-dark); color: #fff; margin: 0; padding: 0; overflow: hidden; }
+        body { font-family: sans-serif; background: var(--bg-dark); color: #fff; margin: 0; padding: 0; overflow: hidden; -webkit-tap-highlight-color: transparent; }
         
-        #video-viewport { position: relative; width: 100%; aspect-ratio: 16/9; background: #000; overflow: hidden; }
+        #video-viewport { position: relative; width: 100%; aspect-ratio: 16/9; background: #000; overflow: hidden; z-index: 1; }
         video { width: 100%; height: 100%; display: block; }
 
-        /* Stats nhỏ gọn ở góc phải khi Fullscreen */
-        #fs-stats {
-            position: absolute; top: 10px; right: 10px;
-            font-size: 10px; color: var(--stat-color); font-family: monospace;
-            background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 3px;
-            z-index: 2147483647; display: none; pointer-events: none; opacity: 0.8;
+        /* Stats Layer */
+        .stats-overlay {
+            position: absolute; color: var(--stat-color); font-family: monospace;
+            background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px;
+            pointer-events: none; z-index: 2147483647; transition: opacity 0.3s;
         }
-        body.is-fs #fs-stats { display: block; }
+        /* Stats ở chế độ thường (Dưới video) */
+        #web-stats { position: static; font-size: 11px; margin-top: 5px; display: inline-block; }
+        
+        /* Stats ở Fullscreen (Góc trên phải, ẩn hiện theo Sidebar) */
+        #fs-stats { top: 10px; right: 10px; font-size: 10px; display: none; opacity: 0; }
+        body.is-fs .controls-overlay.active #fs-stats { display: block; opacity: 1; }
 
         .controls-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.3s;
-            z-index: 100; display: flex; pointer-events: none;
+            background: rgba(0,0,0,0.4); opacity: 0; transition: opacity 0.2s;
+            z-index: 2147483640; display: flex; pointer-events: none;
         }
         .controls-overlay.active { opacity: 1; pointer-events: auto; }
 
         .sidebar {
             width: 170px; height: 100%; background: rgba(10,10,10,0.98);
-            transform: translateX(-100%); transition: transform 0.2s;
+            transform: translateX(-100%); transition: transform 0.2s ease;
             border-right: 1px solid #333; overflow-y: auto;
         }
         .controls-overlay.active .sidebar { transform: translateX(0); }
+        
         .side-item { padding: 12px 10px; border-bottom: 1px solid #222; text-align: center; cursor: pointer; }
         .side-item img { width: 90px; height: 45px; object-fit: contain; }
+        .side-item span { display: block; font-size: 11px; font-weight: bold; margin-top: 4px; }
 
-        .btn-group { position: fixed; bottom: 20px; right: 20px; display: flex; gap: 10px; z-index: 200; }
+        .btn-group { position: fixed; bottom: 20px; right: 20px; display: flex; gap: 10px; z-index: 2147483647; }
         .action-btn {
-            background: var(--action-blue); color: white; border: 1px solid #fff;
-            padding: 12px 18px; border-radius: 50px; font-weight: bold; font-size: 13px; cursor: pointer;
+            background: var(--action-blue); color: white; border: 1.5px solid #fff;
+            padding: 12px 18px; border-radius: 50px; font-weight: bold; font-size: 13px;
+            cursor: pointer;
         }
         body.is-fs .reload-btn, body.is-fs #btn-enter { display: none; }
         #btn-exit { display: none; position: absolute; bottom: 20px; right: 20px; }
@@ -48,18 +55,23 @@
 
         .info { padding: 10px 15px; border-bottom: 1px solid #333; }
         .info h2 { margin: 0; font-size: 16px; color: #ffcc00; }
-        .stats-row { font-family: monospace; font-size: 11px; color: var(--stat-color); margin-top: 3px; }
 
-        .mobile-container { padding: 10px; overflow-y: auto; height: calc(100vh - 300px); }
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-        .grid-item { background: #1a1a1a; padding: 8px; border-radius: 5px; text-align: center; border: 1px solid #333; }
+        .mobile-container { padding: 10px; padding-bottom: 80px; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .grid-item { background: #1a1a1a; padding: 10px; border-radius: 8px; text-align: center; }
+        
+        @media (min-width: 992px) { 
+            .mobile-container { display: none; } 
+            #video-viewport { max-width: 80vw; margin: 15px auto; border-radius: 8px; }
+        }
     </style>
 </head>
 <body>
 
 <div id="video-viewport" onclick="showUI()">
     <video id="main-video" autoplay playsinline></video>
-    <div id="fs-stats">0x0 | 0Mbps | 0fps</div>
+    <div id="fs-stats" class="stats-overlay">0 Mbps | 0 fps</div>
+    
     <div class="controls-overlay" id="ui-overlay">
         <div class="sidebar" id="side-list" onclick="event.stopPropagation()"></div>
         <button id="btn-exit" class="action-btn" onclick="handleFS(false, event)">THOÁT</button>
@@ -72,8 +84,8 @@
 </div>
 
 <div class="info">
-    <h2 id="now-playing">Đang tải...</h2>
-    <div class="stats-row" id="web-stats">0x0 | 0Mbps | 0fps</div>
+    <h2 id="now-playing">VTV1 HD</h2>
+    <div id="web-stats" class="stats-overlay">0x0 | 0 Mbps | 0 fps</div>
 </div>
 
 <div class="mobile-container"><div class="grid" id="main-grid"></div></div>
@@ -84,15 +96,22 @@
         { name: "VTV1 HD", short: "VTV1", logo: "https://vn.xemtv.net/image/vtv1.png", url: "https://live.fptplay53.net/fnxch2/vtv1hd_abr.smil/chunklist.m3u8" },
         { name: "VTV2 HD", short: "VTV2", logo: "https://vn.xemtv.net/image/vtv2.png", url: "https://live.fptplay53.net/fnxch2/vtv2hd_abr.smil/chunklist.m3u8" },
         { name: "VTV3 HD", short: "VTV3", logo: "https://vn.xemtv.net/image/vtv3.png", url: "https://live.fptplay53.net/fnxch2/vtv3hd_abr.smil/chunklist.m3u8" },
+        { name: "VTV4 HD", short: "VTV4", logo: "https://vn.xemtv.net/image/vtv4.png", url: "https://live.fptplay53.net/fnxch2/vtv4hd_abr.smil/chunklist.m3u8" },
         { name: "VTV5 HD", short: "VTV5", logo: "https://vn.xemtv.net/image/vtv5.png", url: "https://live-a.fptplay53.net/live/media/VTV5HD/live_hls_avc/index.m3u8" },
         { name: "VTV7 HD", short: "VTV7", logo: "https://vn.xemtv.net/image/vtv7.png", url: "https://live.fptplay53.net/fnxhd1/vtv7hd_vhls.smil/chunklist_b5000000.m3u8" },
+        { name: "VTV8 HD", short: "VTV8", logo: "https://vn.xemtv.net/image/vtv8.png", url: "https://live.fptplay53.net/epzhd1/vtv8hd_vhls.smil/chunklist.m3u8" },
+        { name: "VTV9 HD", short: "VTV9", logo: "https://vn.xemtv.net/image/vtv9.png", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv9-hd/KenhCoBan.m3u8" },
         { name: "HTV7 HD", short: "HTV7", logo: "https://vn.xemtv.net/image/htv7.png", url: "https://live.fptplay53.net/epzch2/htv7hd_abr.smil/chunklist.m3u8" },
-        { name: "HTV9 HD", short: "HTV9", logo: "https://vn.xemtv.net/image/htv9.png", url: "https://live.fptplay53.net/epzhd1/htv9hd_vhls.smil/chunklist.m3u8" }
+        { name: "HTV9 HD", short: "HTV9", logo: "https://vn.xemtv.net/image/htv9.png", url: "https://live.fptplay53.net/epzhd1/htv9hd_vhls.smil/chunklist.m3u8" },
+        { name: "HTV1 HD", short: "HTV1", logo: "https://vn.xemtv.net/image/htv1.png", url: "https://live.fptplay53.net/epzhd1/htv1_hls.smil/chunklist.m3u8" },
+        { name: "HTV2 HD", short: "HTV2", logo: "https://vn.xemtv.net/image/htv2.png", url: "https://live.fptplay53.net/epzhd1/htv2hd_vhls.smil/chunklist.m3u8" },
+        { name: "HTV3 HD", short: "HTV3", logo: "https://vn.xemtv.net/image/htv3.png", url: "https://live.fptplay53.net/epzhd1/htv3_hls.smil/chunklist.m3u8" },
+        { name: "Vietnam Today", short: "VNT", logo: "https://vn.xemtv.net/image/vietnamtoday.png", url: "https://live.fptplay53.net/fnxhd1/vntoday_vhls.smil/chunklist_b5000000.m3u8" }
     ];
 
     const v = document.getElementById('main-video'), view = document.getElementById('video-viewport');
-    const overlay = document.getElementById('ui-overlay'), webStats = document.getElementById('web-stats'), fsStats = document.getElementById('fs-stats');
-    let hls = new Hls(), timer, lastDecodedFrames = 0, lastTimestamp = performance.now();
+    const overlay = document.getElementById('ui-overlay'), wStats = document.getElementById('web-stats'), fStats = document.getElementById('fs-stats');
+    let hls = new Hls(), timer, lastTime = 0, frameCount = 0, fps = 0;
 
     function showUI() {
         overlay.classList.add('active');
@@ -114,31 +133,38 @@
     document.addEventListener('fullscreenchange', () => document.body.classList.toggle('is-fs', !!document.fullscreenElement));
     document.addEventListener('webkitfullscreenchange', () => document.body.classList.toggle('is-fs', !!document.webkitIsFullScreen));
 
-    // Tính toán FPS và Stats
+    // Đo FPS thực tế
+    function updateFPS() {
+        if (!v.paused) {
+            frameCount++;
+            const now = performance.now();
+            if (now - lastTime >= 1000) {
+                fps = frameCount;
+                frameCount = 0;
+                lastTime = now;
+            }
+        }
+        requestAnimationFrame(updateFPS);
+    }
+    updateFPS();
+
+    // Cập nhật thông số gọn gàng
     setInterval(() => {
         if (v.readyState > 0) {
-            const now = performance.now();
-            const decodedFrames = v.getVideoPlaybackQuality ? v.getVideoPlaybackQuality().totalVideoFrames : 0;
-            const fps = Math.round((decodedFrames - lastDecodedFrames) / ((now - lastTimestamp) / 1000));
-            lastDecodedFrames = decodedFrames; lastTimestamp = now;
-
-            const quality = hls.levels[hls.currentLevel] || {};
-            const bitrate = quality.bitrate ? (quality.bitrate / 1000000).toFixed(1) + "Mbps" : "0Mbps";
+            const level = hls.levels[hls.currentLevel] || {};
+            const mbps = level.bitrate ? (level.bitrate / 1000000).toFixed(1) + " Mbps" : "Auto";
             const res = v.videoWidth + "x" + v.videoHeight;
             
-            const txt = `${res} | ${bitrate} | ${fps || 0}fps`;
-            webStats.innerText = txt;
-            fsStats.innerText = txt;
+            wStats.innerText = `${res} | ${mbps} | ${fps} fps`;
+            fStats.innerText = `${mbps} | ${fps} fps`;
         }
-    }, 1000);
+    }, 1500);
 
     function play(c) {
         document.getElementById('now-playing').innerText = c.name;
-        if (Hls.isSupported()) {
-            hls.destroy(); hls = new Hls();
-            hls.loadSource(c.url); hls.attachMedia(v);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => v.play());
-        } else { v.src = c.url; v.play(); }
+        hls.destroy(); hls = new Hls();
+        hls.loadSource(c.url); hls.attachMedia(v);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => v.play());
         overlay.classList.remove('active');
     }
 
@@ -146,14 +172,12 @@
         const side = document.getElementById('side-list'), grid = document.getElementById('main-grid');
         channels.forEach(c => {
             const sItem = document.createElement('div'); sItem.className = 'side-item';
-            sItem.innerHTML = `<img src="${c.logo}">`;
-            sItem.onclick = () => play(c);
-            side.appendChild(sItem);
+            sItem.innerHTML = `<img src="${c.logo}"><span>${c.short}</span>`;
+            sItem.onclick = () => play(c); side.appendChild(sItem);
 
             const gItem = document.createElement('div'); gItem.className = 'grid-item';
-            gItem.innerHTML = `<img src="${c.logo}" style="width:100%">`;
-            gItem.onclick = () => play(c);
-            grid.appendChild(gItem);
+            gItem.innerHTML = `<img src="${c.logo}" style="width:100%"><p style="font-size:9px;margin:3px 0 0;">${c.name}</p>`;
+            gItem.onclick = () => play(c); grid.appendChild(gItem);
         });
         play(channels.find(c => c.short === "VTV1") || channels[0]);
     }
