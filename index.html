@@ -12,17 +12,21 @@
         #video-viewport { position: relative; width: 100%; aspect-ratio: 16/9; background: #000; overflow: hidden; z-index: 1; }
         video { width: 100%; height: 100%; display: block; }
 
-        /* Stats Layer */
         .stats-overlay {
             color: var(--stat-color); font-family: monospace;
             background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px;
             pointer-events: none; z-index: 2147483647;
         }
         
-        /* Stats Sidebar (Hiện ở đầu list) */
-        #sb-stats { font-size: 10px; margin: 10px auto; text-align: center; width: 80%; border: 1px solid #333; }
+        /* Stats Sidebar: Căn sang phải */
+        #sb-stats { 
+            font-size: 10px; 
+            margin: 10px 10px 5px auto; /* Đẩy sang phải bằng margin auto */
+            text-align: right; 
+            width: fit-content; /* Chỉ rộng bằng nội dung chữ */
+            display: block;
+        }
         
-        /* Stats Fullscreen (Góc trên phải) */
         #fs-stats { position: absolute; top: 10px; right: 10px; font-size: 10px; display: none; }
         body.is-fs .controls-overlay.active #fs-stats { display: block; }
 
@@ -33,15 +37,25 @@
         }
         .controls-overlay.active { opacity: 1; pointer-events: auto; }
 
+        /* Sidebar căn giữa logo */
         .sidebar {
             width: 140px; height: 100%; background: rgba(10,10,10,0.98);
             transform: translateX(-100%); transition: transform 0.2s ease;
             border-right: 1px solid #333; overflow-y: auto; overscroll-behavior: contain;
+            display: flex; flex-direction: column; /* Để điều khiển stats và list */
         }
         .controls-overlay.active .sidebar { transform: translateX(0); }
         
-        .side-item { padding: 10px; border-bottom: 1px solid #222; text-align: center; cursor: pointer; }
-        .side-item img { width: 100%; height: 45px; object-fit: contain; pointer-events: none; }
+        .side-item { 
+            padding: 10px; 
+            border-bottom: 1px solid #222; 
+            display: flex; /* Dùng flex để căn giữa logo */
+            align-items: center; 
+            justify-content: center; 
+            min-height: 60px;
+            cursor: pointer; 
+        }
+        .side-item img { max-width: 100%; max-height: 45px; object-fit: contain; pointer-events: none; }
 
         .btn-group { position: fixed; bottom: 20px; right: 20px; display: flex; gap: 10px; z-index: 2147483647; }
         .action-btn {
@@ -56,9 +70,20 @@
         .info h2 { margin: 0; font-size: 16px; color: #ffcc00; }
         #web-stats { font-size: 11px; margin-top: 5px; display: inline-block; }
 
-        .mobile-container { padding: 10px; padding-bottom: 80px; overflow-y: auto; height: calc(100vh - 250px); }
+        /* Grid ngoài căn giữa logo */
+        .mobile-container { padding: 10px; padding-bottom: 80px; }
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .grid-item { background: #1a1a1a; padding: 10px; border-radius: 8px; text-align: center; }
+        .grid-item { 
+            background: #1a1a1a; 
+            padding: 15px 5px; 
+            border-radius: 8px; 
+            border: 1px solid #333;
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            aspect-ratio: 4/3; /* Giúp các ô vuông vức bằng nhau */
+        }
+        .grid-item img { max-width: 90%; max-height: 90%; object-fit: contain; }
         
         @media (min-width: 992px) { 
             #video-viewport { max-width: 80vw; margin: 15px auto; border-radius: 8px; }
@@ -73,8 +98,8 @@
     
     <div class="controls-overlay" id="ui-overlay">
         <div class="sidebar" id="side-list" onclick="event.stopPropagation()">
-            <div id="sb-stats" class="stats-overlay">Đang tải...</div>
-        </div>
+            <div id="sb-stats" class="stats-overlay">0 Mbps | 0 fps</div>
+            </div>
         <button id="btn-exit" class="action-btn" onclick="handleFS(false, event)">THOÁT</button>
     </div>
 </div>
@@ -162,7 +187,6 @@
         hls.loadSource(c.url); hls.attachMedia(v);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
             v.play();
-            // Ép ngang khi chọn kênh trong Sidebar nếu đang Fullscreen
             if(document.fullscreenElement && screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{});
         });
         overlay.classList.remove('active');
@@ -172,11 +196,11 @@
         const side = document.getElementById('side-list'), grid = document.getElementById('main-grid');
         channels.forEach(c => {
             const sItem = document.createElement('div'); sItem.className = 'side-item';
-            sItem.innerHTML = `<img src="${c.logo}">`; // Bỏ text
+            sItem.innerHTML = `<img src="${c.logo}">`;
             sItem.onclick = () => play(c); side.appendChild(sItem);
 
             const gItem = document.createElement('div'); gItem.className = 'grid-item';
-            gItem.innerHTML = `<img src="${c.logo}" style="width:100%">`;
+            gItem.innerHTML = `<img src="${c.logo}">`;
             gItem.onclick = () => play(c); grid.appendChild(gItem);
         });
         play(channels.find(c => c.short === "VTV1") || channels[0]);
