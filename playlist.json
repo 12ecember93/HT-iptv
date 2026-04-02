@@ -10,7 +10,7 @@
     { "name": "VTV9 HD", "short": "VTV9", "logo": "https://vtvgo-assets.vtvdigital.vn/assets/images/v2/logo/VTV9_150x901_1675158866.webp", "url": "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv9-hd/KenhCoBan.m3u8" }
   ],
   "HTV & THVL": [
-    { "name": "Vĩnh Long 1", "short": "THVL1", "logo": "https://static3.thvli.vn/assets/thumbnail/2025/09/12/pbe9c6gh_button_thvl1.png", "url": "https://live.fptplay53.net/epzhd2/vinhlong1_vhls.smil/chunklist_b5000000.m3u8" },
+    { "name": "Vĩnh Long 1", "short": "THVL1", "logo": "https://upload.wikimedia.org/wikipedia/commons/d/de/Logo_thvl1_2008-nay_2.png", "url": "https://live.fptplay53.net/epzhd2/vinhlong1_vhls.smil/chunklist_b5000000.m3u8" },
     { "name": "HTV7 HD", "short": "HTV7", "logo": "https://vn.xemtv.net/image/htv7.png", "url": "https://live.fptplay53.net/epzch2/htv7hd_abr.smil/chunklist.m3u8" },
     { "name": "HTV9 HD", "short": "HTV9", "logo": "https://vn.xemtv.net/image/htv9.png", "url": "https://live.fptplay53.net/epzhd1/htv9hd_vhls.smil/chunklist.m3u8" },
     { "name": "HTV1 HD", "short": "HTV1", "logo": "https://vn.xemtv.net/image/htv1.png", "url": "https://live.fptplay53.net/epzhd1/htv1_hls.smil/chunklist.m3u8" },
