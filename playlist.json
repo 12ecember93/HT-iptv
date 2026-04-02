@@ -1,6 +1,6 @@
 {
   "VTV": [
-    { "name": "VTV1 HD", "short": "VTV1", "logo": "https://vn.xemtv.net/image/vtv1.png", "url": "https://live.fptplay53.net/fnxch2/vtv1hd_abr.smil/chunklist.m3u8" },
+    { "name": "VTV1 HD", "short": "VTV1", "logo": "https://vtvgo-assets.vtvdigital.vn/assets/images/v2/logo/VTV1_150x902_1675159127.webp", "url": "https://live.fptplay53.net/fnxch2/vtv1hd_abr.smil/chunklist.m3u8" },
     { "name": "VTV2 HD", "short": "VTV2", "logo": "https://vn.xemtv.net/image/vtv2.png", "url": "https://live.fptplay53.net/fnxch2/vtv2hd_abr.smil/chunklist.m3u8" },
     { "name": "VTV3 HD", "short": "VTV3", "logo": "https://vn.xemtv.net/image/vtv3.png", "url": "https://live.fptplay53.net/fnxch2/vtv3hd_abr.smil/chunklist.m3u8" },
     { "name": "VTV4 HD", "short": "VTV4", "logo": "https://vn.xemtv.net/image/vtv4.png", "url": "https://live.fptplay53.net/fnxch2/vtv4hd_abr.smil/chunklist.m3u8" },
@@ -16,6 +16,6 @@
     { "name": "HTV1 HD", "short": "HTV1", "logo": "https://vn.xemtv.net/image/htv1.png", "url": "https://live.fptplay53.net/epzhd1/htv1_hls.smil/chunklist.m3u8" },
     { "name": "HTV2 HD", "short": "HTV2", "logo": "https://vn.xemtv.net/image/htv2.png", "url": "https://live.fptplay53.net/epzhd1/htv2hd_vhls.smil/chunklist.m3u8" },
     { "name": "HTV3 HD", "short": "HTV3", "logo": "https://vn.xemtv.net/image/htv3.png", "url": "https://live.fptplay53.net/epzhd1/htv3_hls.smil/chunklist.m3u8" },
-    { "name": "Vietnam Today", "short": "VNT", "logo": "https://static.mediacdn.vn/vietnamtoday/images/logo-VNToday.svg", "url": "https://live.fptplay53.net/fnxhd1/vntoday_vhls.smil/chunklist_b5000000.m3u8" }
+    { "name": "Vietnam Today", "short": "VNT", "logo": "https://vtvgo-assets.vtvdigital.vn/assets/images/v2/channel/20250906/2025090623/vvcemcZDle-VIETNAMTODAY-KENHVTVgo-150x90copy.webp", "url": "https://live.fptplay53.net/fnxhd1/vntoday_vhls.smil/chunklist_b5000000.m3u8" }
   ]
 }
