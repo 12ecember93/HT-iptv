@@ -3,35 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TV PRO - HYBRID</title>
-    <link rel="icon" type="image/jpeg" href="https://raw.githubusercontent.com/12ecember93/HT-iptv/main/httv.jpg">
+    <title>TV PRO PRO</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
-        :root { --bg-dark: #000; --yellow: #ffcc00; --focus-bg: rgba(255, 255, 255, 0.2); }
-        body { font-family: sans-serif; background: var(--bg-dark); color: #fff; margin: 0; padding: 0; overflow: hidden; }
+        :root { --bg-dark: #000; --yellow: #ffcc00; --focus-bg: rgba(255, 255, 255, 0.25); }
+        body { font-family: sans-serif; background: var(--bg-dark); color: #fff; margin: 0; padding: 0; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+        
         #video-viewport { position: relative; width: 100vw; height: 100vh; background: #000; }
         video { width: 100%; height: 100%; object-fit: contain; }
         
-        /* Sidebar đa năng */
-        .controls-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.3s; z-index: 50; pointer-events: none; }
+        /* Sidebar - Duy nhất 1 Mode */
+        .controls-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.2); opacity: 0; transition: opacity 0.2s; z-index: 50; pointer-events: none; }
         .controls-overlay.active { opacity: 1; pointer-events: auto; }
-        .sidebar { width: 160px; height: 100%; background: rgba(10,10,10,0.95); transform: translateX(-100%); transition: transform 0.3s; overflow-y: auto; border-right: 1px solid #333; pointer-events: auto; }
+        
+        .sidebar { 
+            width: 140px; height: 100%; background: rgba(15,15,15,0.95); 
+            transform: translateX(-100%); transition: transform 0.2s; 
+            overflow-y: auto; border-right: 1px solid #333; 
+            scrollbar-width: none; /* Hide scrollbar Firefox */
+        }
+        .sidebar::-webkit-scrollbar { display: none; } /* Hide scrollbar Chrome/Safari */
         .controls-overlay.active .sidebar { transform: translateX(0); }
         
-        .side-item { padding: 15px 10px; border-bottom: 1px solid #222; text-align: center; opacity: 0.5; outline: none; cursor: pointer; transition: 0.2s; }
-        .side-item.active { opacity: 1; border-left: 5px solid var(--yellow); background: rgba(255,204,0,0.1); }
+        .side-item { 
+            padding: 12px 8px; border-bottom: 1px solid #222; text-align: center; 
+            opacity: 0.5; outline: none; cursor: pointer; transition: 0.2s; 
+        }
+        .side-item.active { opacity: 1; border-left: 5px solid var(--yellow); background: rgba(255,204,0,0.15); }
         
-        /* Hiệu ứng Focus cho Android TV D-pad */
-        .side-item:focus, .side-item.tv-focus { opacity: 1; background: var(--focus-bg); outline: 3px solid #fff; }
-        .side-item img { max-width: 100%; max-height: 50px; pointer-events: none; }
+        /* Focus cho D-pad Android TV */
+        .side-item:focus { opacity: 1; background: var(--focus-bg); transform: scale(1.05); z-index: 2; }
+        .side-item img { max-width: 100%; max-height: 45px; object-fit: contain; pointer-events: none; }
 
-        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--yellow); font-weight: bold; z-index: 60; }
+        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--yellow); font-weight: bold; z-index: 60; text-shadow: 0 0 10px #000; pointer-events: none; }
     </style>
 </head>
 <body>
 
 <div id="video-viewport" onclick="toggleUI()">
-    <div id="loading">KẾT NỐI...</div>
+    <div id="loading">ĐANG TẢI...</div>
     <video id="main-video" autoplay playsinline muted></video>
     
     <div class="controls-overlay" id="ui-overlay">
@@ -40,19 +50,15 @@
 </div>
 
 <script>
-    const v = document.getElementById('main-video');
-    const view = document.getElementById('video-viewport');
-    const overlay = document.getElementById('ui-overlay');
-    const loader = document.getElementById('loading');
+    const v = document.getElementById('main-video'), view = document.getElementById('video-viewport');
+    const overlay = document.getElementById('ui-overlay'), loader = document.getElementById('loading');
     const sideContent = document.getElementById('sidebar-content');
     
-    let hls = new Hls();
-    let uiTimer, channels = [];
-    let currentIndex = 0;
+    let hls = new Hls(), uiTimer, channels = [], currentIndex = 0;
 
     function playChannel(c) {
         loader.style.display = 'block';
-        v.muted = false; // Cố gắng mở tiếng khi người dùng chọn kênh
+        v.muted = false; // Force unmute on selection
         
         document.querySelectorAll('.side-item').forEach(el => el.classList.remove('active'));
         const activeItem = document.querySelector(`[data-url="${c.url}"]`);
@@ -73,63 +79,68 @@
 
     function toggleUI() {
         overlay.classList.add('active');
-        // Focus vào kênh đang phát khi mở menu
-        const active = document.querySelector('.side-item.active');
+        const active = document.querySelector('.side-item.active') || document.querySelector('.side-item');
         if(active) active.focus();
-        
+        resetTimer();
+    }
+
+    function resetTimer() {
         clearTimeout(uiTimer);
-        uiTimer = setTimeout(() => overlay.classList.remove('active'), 5000);
+        uiTimer = setTimeout(() => {
+            overlay.classList.remove('active');
+            v.focus(); // Trả focus về video để tránh lỗi điều khiển
+        }, 2000); // Tự ẩn sau 2 giây
     }
 
     async function init() {
         try {
             const res = await fetch('playlist.json');
             const data = await res.json();
-            let rawChannels = Object.values(data).flat();
+            let rawList = Object.values(data).flat();
 
-            // 1. Đưa THVL1 lên đầu sidebar
-            const thvl1 = rawChannels.find(c => c.short === 'THVL1');
-            const others = rawChannels.filter(c => c.short !== 'THVL1');
-            channels = thvl1 ? [thvl1, ...others] : rawChannels;
+            // 1. Đưa THVL1 lên đầu Sidebar
+            const thvl1 = rawList.find(c => c.short === 'THVL1');
+            const others = rawList.filter(c => c.short !== 'THVL1');
+            channels = thvl1 ? [thvl1, ...others] : rawList;
 
-            channels.forEach((c, index) => {
+            channels.forEach((c) => {
                 const item = document.createElement('div');
                 item.className = 'side-item';
-                item.tabIndex = 0; // Quan trọng để nhận D-pad focus
+                item.tabIndex = 0; 
                 item.setAttribute('data-url', c.url);
                 item.innerHTML = `<img src="${c.logo}">`;
-                
                 item.onclick = (e) => { e.stopPropagation(); playChannel(c); };
                 sideContent.appendChild(item);
             });
 
-            // 2. Mở app phát VTV1 mặc định (không thay đổi)
+            // 2. Mở app phát VTV1 mặc định
             const vtv1 = channels.find(c => c.short === 'VTV1') || channels[0];
             if(vtv1) playChannel(vtv1);
 
-        } catch (e) { loader.innerText = "LỖI TẢI KÊNH"; }
+        } catch (e) { loader.innerText = "LỖI DANH SÁCH"; }
     }
 
-    // Xử lý D-pad cho Android TV
+    // Xử lý D-pad + Phím cứng
     document.addEventListener('keydown', (e) => {
         const items = document.querySelectorAll('.side-item');
+        
+        // Nếu Menu đang ẩn, bấm phím bất kỳ (Lên/Xuống/OK) để hiện Menu
         if (!overlay.classList.contains('active')) {
-            if ([13, 23, 19, 20, 21, 22].includes(e.keyCode)) toggleUI();
+            if ([13, 23, 38, 40].includes(e.keyCode)) toggleUI();
             return;
         }
 
-        clearTimeout(uiTimer); // Reset timer khi đang bấm
-        uiTimer = setTimeout(() => overlay.classList.remove('active'), 5000);
+        resetTimer(); // Bấm phím thì reset thời gian ẩn
 
-        if (e.keyCode === 40) { // DOWN
-            currentIndex = (currentIndex + 1) % items.length; // Wrap around
+        if (e.keyCode === 40) { // DOWN: Wrap around
+            currentIndex = (currentIndex + 1) % items.length;
             items[currentIndex].focus();
-            items[currentIndex].scrollIntoView({ block: 'center' });
-        } else if (e.keyCode === 38) { // UP
-            currentIndex = (currentIndex - 1 + items.length) % items.length; // Wrap around
+            items[currentIndex].scrollIntoView({ block: 'center', behavior: 'smooth' });
+        } else if (e.keyCode === 38) { // UP: Wrap around
+            currentIndex = (currentIndex - 1 + items.length) % items.length;
             items[currentIndex].focus();
-            items[currentIndex].scrollIntoView({ block: 'center' });
-        } else if (e.keyCode === 13 || e.keyCode === 23 || e.keyCode === 39) { // ENTER hoặc RIGHT
+            items[currentIndex].scrollIntoView({ block: 'center', behavior: 'smooth' });
+        } else if (e.keyCode === 13 || e.keyCode === 23 || e.keyCode === 39) { // ENTER hoặc RIGHT: Chọn kênh
             playChannel(channels[currentIndex]);
         }
     });
