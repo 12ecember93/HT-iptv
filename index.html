@@ -13,7 +13,6 @@
         #video-viewport { position: relative; width: 100%; aspect-ratio: 16/9; background: #000; overflow: hidden; z-index: 10; }
         video { width: 100%; height: 100%; object-fit: contain; }
 
-        /* Stats & UI */
         .stats-overlay { color: var(--green); font-family: monospace; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 4px; pointer-events: none; z-index: 100; font-size: 10px; }
         #fs-stats { position: absolute; top: 10px; right: 10px; display: none; }
         body.is-fs .controls-overlay.active #fs-stats { display: block; }
@@ -32,20 +31,22 @@
 
         .side-item { padding: 15px 10px; border-bottom: 1px solid #222; display: flex; align-items: center; justify-content: center; min-height: 60px; opacity: 0.5; transition: 0.2s; }
         .side-item.active { opacity: 1; border-left: 4px solid var(--yellow); background: rgba(255,204,0,0.1); }
+        .side-item.tv-focus { opacity: 1; outline: 3px solid #fff; background: rgba(255,255,255,0.15); }
         .side-item img { max-width: 100%; max-height: 45px; object-fit: contain; }
 
-        /* Grid & Loading */
         .mobile-container { padding: 15px; padding-bottom: 100px; }
         .group-title { color: var(--yellow); font-size: 14px; font-weight: bold; margin: 20px 0 10px; border-left: 3px solid var(--yellow); padding-left: 10px; }
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
         .grid-item { background: #1a1a1a; border-radius: 8px; border: 1px solid #333; height: 80px; display: flex; align-items: center; justify-content: center; overflow: hidden; transition: 0.2s; }
         .grid-item.active { border-color: var(--yellow); background: #2a2a2a; }
+        .grid-item.tv-focus { border-color: #fff; background: #2a2a2a; outline: 3px solid #fff; transform: scale(1.05); }
         .grid-item img { width: 85%; height: 85%; object-fit: contain; }
 
         #loading-spinner { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; color: var(--yellow); font-weight: bold; z-index: 20; text-shadow: 0 0 10px #000; }
 
         .btn-group { position: fixed; bottom: 20px; right: 20px; display: flex; gap: 10px; z-index: 999; }
         .action-btn { background: var(--blue); color: white; border: 1.5px solid #fff; padding: 12px 18px; border-radius: 50px; font-weight: bold; font-size: 13px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+        .action-btn.tv-focus { outline: 3px solid #fff; transform: scale(1.1); }
         
         body.is-fs #btn-enter, body.is-fs #btn-reload { display: none; }
         #btn-exit { display: none; position: absolute; bottom: 20px; right: 20px; }
@@ -85,7 +86,6 @@
     const v = document.getElementById('main-video'), view = document.getElementById('video-viewport');
     const overlay = document.getElementById('ui-overlay'), wStats = document.getElementById('web-stats'), fStats = document.getElementById('fs-stats'), sStats = document.getElementById('sb-stats'), spinner = document.getElementById('loading-spinner');
     
-    // Khởi tạo HLS với cấu hình chịu lỗi cao
     let hls = new Hls({ 
         enableWorker: true, 
         manifestLoadingMaxRetry: 10,
@@ -95,7 +95,6 @@
 
     let uiTimer, lastTime = 0, frameCount = 0, fps = 0, statsInterval;
 
-    // Xử lý phục hồi luồng
     hls.on(Hls.Events.ERROR, (e, data) => {
         if (data.fatal) {
             if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
@@ -128,14 +127,12 @@
         }, 3000);
     }
 
-    // FIX FULLSCREEN MOBILE ĐẶC BIỆT
     function handleFS(enter, e) {
         if(e) e.stopPropagation();
         if(enter) {
-            if(v.webkitEnterFullscreen) v.webkitEnterFullscreen(); // iOS
+            if(v.webkitEnterFullscreen) v.webkitEnterFullscreen();
             else if(view.requestFullscreen) view.requestFullscreen();
             else if(v.requestFullscreen) v.requestFullscreen();
-            
             if(screen.orientation && screen.orientation.lock) {
                 screen.orientation.lock('landscape').catch(() => {});
             }
@@ -156,20 +153,16 @@
         requestAnimationFrame(fpsLoop);
     })();
 
-    // CHUYỂN KÊNH SIÊU ỔN ĐỊNH
     function play(c) {
-        if (v.src && v.src.includes(c.url)) return; // Tránh nạp lại cùng 1 kênh
-
+        if (v.src && v.src.includes(c.url)) return;
         document.getElementById('now-playing').innerText = c.name;
         spinner.style.display = 'block';
-        
         document.querySelectorAll('.side-item, .grid-item').forEach(el => el.classList.remove('active'));
         document.querySelectorAll(`[data-url="${c.url}"]`).forEach(el => el.classList.add('active'));
-
         if (Hls.isSupported()) {
-            hls.detachMedia(); // Tách tạm thời
+            hls.detachMedia();
             hls.loadSource(c.url);
-            hls.attachMedia(v); // Gắn lại ngay lập tức để giữ Fullscreen state
+            hls.attachMedia(v);
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
                 v.play().catch(() => {});
                 spinner.style.display = 'none';
@@ -178,12 +171,103 @@
             v.src = c.url; 
             v.play().catch(() => {});
         }
-        
-        // Chỉ ẩn sidebar nếu KHÔNG ở chế độ fullscreen (để tránh mất focus)
         if(!document.body.classList.contains('is-fs')) {
             setTimeout(() => overlay.classList.remove('active'), 500);
         }
     }
+
+    // ============================================================
+    // D-PAD REMOTE NAVIGATION (Android TV)
+    // ============================================================
+    let tvFocusIndex = 0;
+    let tvItems = [];
+
+    function getTvItems() {
+        // Lấy tất cả item có thể focus theo thứ tự hiển thị
+        return Array.from(document.querySelectorAll(
+            overlay.classList.contains('active')
+                ? '.side-item, #btn-exit'
+                : '.grid-item, #btn-reload, #btn-enter'
+        ));
+    }
+
+    function setTvFocus(idx) {
+        tvItems = getTvItems();
+        if (!tvItems.length) return;
+        tvItems.forEach(el => el.classList.remove('tv-focus'));
+        tvFocusIndex = Math.max(0, Math.min(idx, tvItems.length - 1));
+        tvItems[tvFocusIndex].classList.add('tv-focus');
+        tvItems[tvFocusIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
+    document.addEventListener('keydown', function(e) {
+        const KEY = { UP: 38, DOWN: 40, LEFT: 37, RIGHT: 39, OK: 13, BACK: 8, MENU: 18 };
+
+        // Nút BACK / MENU → ẩn/hiện UI
+        if (e.keyCode === KEY.BACK || e.keyCode === KEY.MENU) {
+            e.preventDefault();
+            if (overlay.classList.contains('active')) {
+                overlay.classList.remove('active');
+                tvItems.forEach(el => el.classList.remove('tv-focus'));
+            } else {
+                showUI();
+                setTvFocus(0);
+            }
+            return;
+        }
+
+        // Nếu UI chưa hiện → mọi phím mũi tên đều mở UI
+        if (!overlay.classList.contains('active') && (e.keyCode === KEY.UP || e.keyCode === KEY.DOWN || e.keyCode === KEY.LEFT || e.keyCode === KEY.RIGHT)) {
+            e.preventDefault();
+            showUI();
+            setTvFocus(0);
+            return;
+        }
+
+        tvItems = getTvItems();
+        if (!tvItems.length) return;
+
+        // Tính số cột của grid (3 cột)
+        const cols = 3;
+
+        if (e.keyCode === KEY.UP) {
+            e.preventDefault();
+            // Nếu đang trong grid → nhảy lên 1 hàng (3 item)
+            const cur = tvItems[tvFocusIndex];
+            if (cur && cur.classList.contains('grid-item')) {
+                setTvFocus(tvFocusIndex - cols);
+            } else {
+                setTvFocus(tvFocusIndex - 1);
+            }
+        } else if (e.keyCode === KEY.DOWN) {
+            e.preventDefault();
+            const cur = tvItems[tvFocusIndex];
+            if (cur && cur.classList.contains('grid-item')) {
+                setTvFocus(tvFocusIndex + cols);
+            } else {
+                setTvFocus(tvFocusIndex + 1);
+            }
+        } else if (e.keyCode === KEY.LEFT) {
+            e.preventDefault();
+            setTvFocus(tvFocusIndex - 1);
+        } else if (e.keyCode === KEY.RIGHT) {
+            e.preventDefault();
+            setTvFocus(tvFocusIndex + 1);
+        } else if (e.keyCode === KEY.OK) {
+            e.preventDefault();
+            if (tvItems[tvFocusIndex]) tvItems[tvFocusIndex].click();
+        }
+
+        // Reset timer ẩn UI mỗi lần bấm phím
+        clearTimeout(uiTimer);
+        uiTimer = setTimeout(() => {
+            overlay.classList.remove('active');
+            tvItems.forEach(el => el.classList.remove('tv-focus'));
+            clearInterval(statsInterval);
+            statsInterval = null;
+        }, 5000);
+    });
+    // ============================================================
 
     async function init() {
         try {
