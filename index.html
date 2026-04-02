@@ -3,31 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>IPTV Final Mobile</title>
+    <title>IPTV PRO MAX</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
-        :root { --bg-dark: #0f0f0f; --action-blue: #0056b3; --stat-color: #00ff00; }
-        body { font-family: sans-serif; background: var(--bg-dark); color: #fff; margin: 0; padding: 0; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+        :root { --bg-dark: #0a0a0a; --card-bg: #161616; --action-blue: #0056b3; --stat-color: #00ff00; --text-gold: #ffcc00; }
+        body { font-family: sans-serif; background: var(--bg-dark); color: #fff; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         
-        #video-viewport { position: relative; width: 100%; aspect-ratio: 16/9; background: #000; overflow: hidden; z-index: 1; }
+        /* Player Box */
+        #video-viewport { position: sticky; top: 0; width: 100%; aspect-ratio: 16/9; background: #000; z-index: 100; overflow: hidden; }
         video { width: 100%; height: 100%; display: block; }
 
-        .stats-overlay {
-            color: var(--stat-color); font-family: monospace;
-            background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px;
-            pointer-events: none; z-index: 2147483647;
-        }
-        
-        /* Stats Sidebar: Căn sang phải */
-        #sb-stats { 
-            font-size: 10px; 
-            margin: 10px 10px 5px auto; /* Đẩy sang phải bằng margin auto */
-            text-align: right; 
-            width: fit-content; /* Chỉ rộng bằng nội dung chữ */
-            display: block;
-        }
-        
-        #fs-stats { position: absolute; top: 10px; right: 10px; font-size: 10px; display: none; }
+        /* Stats & Overlay */
+        .stats-overlay { color: var(--stat-color); font-family: monospace; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 4px; pointer-events: none; }
+        #sb-stats { font-size: 10px; margin: 10px 10px 5px auto; text-align: right; display: block; width: fit-content; }
+        #fs-stats { position: absolute; top: 10px; right: 10px; font-size: 10px; display: none; z-index: 2147483647; }
         body.is-fs .controls-overlay.active #fs-stats { display: block; }
 
         .controls-overlay {
@@ -37,56 +26,42 @@
         }
         .controls-overlay.active { opacity: 1; pointer-events: auto; }
 
-        /* Sidebar căn giữa logo */
+        /* Sidebar */
         .sidebar {
-            width: 140px; height: 100%; background: rgba(10,10,10,0.98);
+            width: 130px; height: 100%; background: rgba(10,10,10,0.98);
             transform: translateX(-100%); transition: transform 0.2s ease;
-            border-right: 1px solid #333; overflow-y: auto; overscroll-behavior: contain;
-            display: flex; flex-direction: column; /* Để điều khiển stats và list */
+            border-right: 1px solid #333; overflow-y: auto; display: flex; flex-direction: column;
         }
         .controls-overlay.active .sidebar { transform: translateX(0); }
-        
-        .side-item { 
-            padding: 10px; 
-            border-bottom: 1px solid #222; 
-            display: flex; /* Dùng flex để căn giữa logo */
-            align-items: center; 
-            justify-content: center; 
-            min-height: 60px;
-            cursor: pointer; 
-        }
-        .side-item img { max-width: 100%; max-height: 45px; object-fit: contain; pointer-events: none; }
+        .side-item { padding: 12px; border-bottom: 1px solid #222; display: flex; align-items: center; justify-content: center; min-height: 55px; cursor: pointer; }
+        .side-item img { max-width: 100%; max-height: 40px; object-fit: contain; }
 
+        /* Floating Buttons */
         .btn-group { position: fixed; bottom: 20px; right: 20px; display: flex; gap: 10px; z-index: 2147483647; }
-        .action-btn {
-            background: var(--action-blue); color: white; border: 1.5px solid #fff;
-            padding: 12px 18px; border-radius: 50px; font-weight: bold; font-size: 13px; cursor: pointer;
-        }
+        .action-btn { background: var(--action-blue); color: white; border: 1.5px solid #fff; padding: 12px 18px; border-radius: 50px; font-weight: bold; font-size: 13px; }
         body.is-fs .reload-btn, body.is-fs #btn-enter { display: none; }
         #btn-exit { display: none; position: absolute; bottom: 20px; right: 20px; }
         body.is-fs #btn-exit { display: block; }
 
-        .info { padding: 10px 15px; border-bottom: 1px solid #333; }
-        .info h2 { margin: 0; font-size: 16px; color: #ffcc00; }
+        /* Main Content */
+        .main-content { padding: 15px; }
+        .info-row { margin-bottom: 20px; }
+        .info-row h2 { margin: 0; font-size: 18px; color: var(--text-gold); }
         #web-stats { font-size: 11px; margin-top: 5px; display: inline-block; }
 
-        /* Grid ngoài căn giữa logo */
-        .mobile-container { padding: 10px; padding-bottom: 80px; }
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        /* Categories & Grid 4 */
+        .cat-title { color: #55acee; font-size: 13px; font-weight: bold; text-transform: uppercase; margin: 20px 0 10px; border-left: 3px solid #55acee; padding-left: 8px; }
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
         .grid-item { 
-            background: #1a1a1a; 
-            padding: 15px 5px; 
-            border-radius: 8px; 
-            border: 1px solid #333;
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            aspect-ratio: 4/3; /* Giúp các ô vuông vức bằng nhau */
+            background: var(--card-bg); border-radius: 6px; border: 1px solid #222;
+            display: flex; align-items: center; justify-content: center;
+            aspect-ratio: 1.2/1; cursor: pointer; padding: 5px;
         }
-        .grid-item img { max-width: 90%; max-height: 90%; object-fit: contain; }
-        
+        .grid-item img { max-width: 90%; max-height: 80%; object-fit: contain; }
+
         @media (min-width: 992px) { 
-            #video-viewport { max-width: 80vw; margin: 15px auto; border-radius: 8px; }
+            #video-viewport { max-width: 850px; margin: 15px auto; border-radius: 8px; position: relative; }
+            .main-content { max-width: 850px; margin: 0 auto; }
         }
     </style>
 </head>
@@ -95,11 +70,10 @@
 <div id="video-viewport" onclick="showUI()">
     <video id="main-video" autoplay playsinline></video>
     <div id="fs-stats" class="stats-overlay">0 Mbps | 0 fps</div>
-    
     <div class="controls-overlay" id="ui-overlay">
         <div class="sidebar" id="side-list" onclick="event.stopPropagation()">
-            <div id="sb-stats" class="stats-overlay">0 Mbps | 0 fps</div>
-            </div>
+            <div id="sb-stats" class="stats-overlay">...</div>
+        </div>
         <button id="btn-exit" class="action-btn" onclick="handleFS(false, event)">THOÁT</button>
     </div>
 </div>
@@ -109,30 +83,31 @@
     <button id="btn-enter" class="action-btn" onclick="handleFS(true, event)">TOÀN MÀN HÌNH</button>
 </div>
 
-<div class="info">
-    <h2 id="now-playing">VTV1 HD</h2>
-    <div id="web-stats" class="stats-overlay">0x0 | 0 Mbps | 0 fps</div>
+<div class="main-content">
+    <div class="info-row">
+        <h2 id="now-playing">VTV1 HD</h2>
+        <div id="web-stats" class="stats-overlay">0x0 | 0 Mbps | 0 fps</div>
+    </div>
+    <div id="category-container"></div>
 </div>
-
-<div class="mobile-container"><div class="grid" id="main-grid"></div></div>
 
 <script>
     const channels = [
-        { name: "Vĩnh Long 1", short: "THVL1", logo: "https://vn.xemtv.net/image/thvl1.png", url: "https://live.fptplay53.net/epzhd2/vinhlong1_vhls.smil/chunklist_b5000000.m3u8" },
-        { name: "VTV1 HD", short: "VTV1", logo: "https://vn.xemtv.net/image/vtv1.png", url: "https://live.fptplay53.net/fnxch2/vtv1hd_abr.smil/chunklist.m3u8" },
-        { name: "VTV2 HD", short: "VTV2", logo: "https://vn.xemtv.net/image/vtv2.png", url: "https://live.fptplay53.net/fnxch2/vtv2hd_abr.smil/chunklist.m3u8" },
-        { name: "VTV3 HD", short: "VTV3", logo: "https://vn.xemtv.net/image/vtv3.png", url: "https://live.fptplay53.net/fnxch2/vtv3hd_abr.smil/chunklist.m3u8" },
-        { name: "VTV4 HD", short: "VTV4", logo: "https://vn.xemtv.net/image/vtv4.png", url: "https://live.fptplay53.net/fnxch2/vtv4hd_abr.smil/chunklist.m3u8" },
-        { name: "VTV5 HD", short: "VTV5", logo: "https://vn.xemtv.net/image/vtv5.png", url: "https://live-a.fptplay53.net/live/media/VTV5HD/live_hls_avc/index.m3u8" },
-        { name: "VTV7 HD", short: "VTV7", logo: "https://vn.xemtv.net/image/vtv7.png", url: "https://live.fptplay53.net/fnxhd1/vtv7hd_vhls.smil/chunklist_b5000000.m3u8" },
-        { name: "VTV8 HD", short: "VTV8", logo: "https://vn.xemtv.net/image/vtv8.png", url: "https://live.fptplay53.net/epzhd1/vtv8hd_vhls.smil/chunklist.m3u8" },
-        { name: "VTV9 HD", short: "VTV9", logo: "https://vn.xemtv.net/image/vtv9.png", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv9-hd/KenhCoBan.m3u8" },
-        { name: "HTV7 HD", short: "HTV7", logo: "https://vn.xemtv.net/image/htv7.png", url: "https://live.fptplay53.net/epzch2/htv7hd_abr.smil/chunklist.m3u8" },
-        { name: "HTV9 HD", short: "HTV9", logo: "https://vn.xemtv.net/image/htv9.png", url: "https://live.fptplay53.net/epzhd1/htv9hd_vhls.smil/chunklist.m3u8" },
-        { name: "HTV1 HD", short: "HTV1", logo: "https://vn.xemtv.net/image/htv1.png", url: "https://live.fptplay53.net/epzhd1/htv1_hls.smil/chunklist.m3u8" },
-        { name: "HTV2 HD", short: "HTV2", logo: "https://vn.xemtv.net/image/htv2.png", url: "https://live.fptplay53.net/epzhd1/htv2hd_vhls.smil/chunklist.m3u8" },
-        { name: "HTV3 HD", short: "HTV3", logo: "https://vn.xemtv.net/image/htv3.png", url: "https://live.fptplay53.net/epzhd1/htv3_hls.smil/chunklist.m3u8" },
-        { name: "Vietnam Today", short: "VNT", logo: "https://vn.xemtv.net/image/vietnamtoday.png", url: "https://live.fptplay53.net/fnxhd1/vntoday_vhls.smil/chunklist_b5000000.m3u8" }
+        { cat: "VTV", name: "Vĩnh Long 1", short: "THVL1", logo: "https://vn.xemtv.net/image/thvl1.png", url: "https://live.fptplay53.net/epzhd2/vinhlong1_vhls.smil/chunklist_b5000000.m3u8" },
+        { cat: "VTV", name: "VTV1 HD", short: "VTV1", logo: "https://vn.xemtv.net/image/vtv1.png", url: "https://live.fptplay53.net/fnxch2/vtv1hd_abr.smil/chunklist.m3u8" },
+        { cat: "VTV", name: "VTV2 HD", short: "VTV2", logo: "https://vn.xemtv.net/image/vtv2.png", url: "https://live.fptplay53.net/fnxch2/vtv2hd_abr.smil/chunklist.m3u8" },
+        { cat: "VTV", name: "VTV3 HD", short: "VTV3", logo: "https://vn.xemtv.net/image/vtv3.png", url: "https://live.fptplay53.net/fnxch2/vtv3hd_abr.smil/chunklist.m3u8" },
+        { cat: "VTV", name: "VTV4 HD", short: "VTV4", logo: "https://vn.xemtv.net/image/vtv4.png", url: "https://live.fptplay53.net/fnxch2/vtv4hd_abr.smil/chunklist.m3u8" },
+        { cat: "VTV", name: "VTV5 HD", short: "VTV5", logo: "https://vn.xemtv.net/image/vtv5.png", url: "https://live-a.fptplay53.net/live/media/VTV5HD/live_hls_avc/index.m3u8" },
+        { cat: "VTV", name: "VTV7 HD", short: "VTV7", logo: "https://vn.xemtv.net/image/vtv7.png", url: "https://live.fptplay53.net/fnxhd1/vtv7hd_vhls.smil/chunklist_b5000000.m3u8" },
+        { cat: "VTV", name: "VTV8 HD", short: "VTV8", logo: "https://vn.xemtv.net/image/vtv8.png", url: "https://live.fptplay53.net/epzhd1/vtv8hd_vhls.smil/chunklist.m3u8" },
+        { cat: "VTV", name: "VTV9 HD", short: "VTV9", logo: "https://vn.xemtv.net/image/vtv9.png", url: "https://toiyeuvietnam.dpdns.org/TuyetDoiKhongKinhDoanh/vtv9-hd/KenhCoBan.m3u8" },
+        { cat: "HTV", name: "HTV7 HD", short: "HTV7", logo: "https://vn.xemtv.net/image/htv7.png", url: "https://live.fptplay53.net/epzch2/htv7hd_abr.smil/chunklist.m3u8" },
+        { cat: "HTV", name: "HTV9 HD", short: "HTV9", logo: "https://vn.xemtv.net/image/htv9.png", url: "https://live.fptplay53.net/epzhd1/htv9hd_vhls.smil/chunklist.m3u8" },
+        { cat: "HTV", name: "HTV1 HD", short: "HTV1", logo: "https://vn.xemtv.net/image/htv1.png", url: "https://live.fptplay53.net/epzhd1/htv1_hls.smil/chunklist.m3u8" },
+        { cat: "HTV", name: "HTV2 HD", short: "HTV2", logo: "https://vn.xemtv.net/image/htv2.png", url: "https://live.fptplay53.net/epzhd1/htv2hd_vhls.smil/chunklist.m3u8" },
+        { cat: "HTV", name: "HTV3 HD", short: "HTV3", logo: "https://vn.xemtv.net/image/htv3.png", url: "https://live.fptplay53.net/epzhd1/htv3_hls.smil/chunklist.m3u8" },
+        { cat: "KHÁC", name: "Vietnam Today", short: "VNT", logo: "https://vn.xemtv.net/image/vietnamtoday.png", url: "https://live.fptplay53.net/fnxhd1/vntoday_vhls.smil/chunklist_b5000000.m3u8" }
     ];
 
     const v = document.getElementById('main-video'), view = document.getElementById('video-viewport');
@@ -153,7 +128,6 @@
             if(screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{});
         } else {
             if(document.exitFullscreen) document.exitFullscreen();
-            else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
         }
     }
 
@@ -173,11 +147,9 @@
         if (v.readyState > 0) {
             const level = hls.levels[hls.currentLevel] || {};
             const mbps = level.bitrate ? (level.bitrate / 1000000).toFixed(1) + " Mbps" : "Auto";
-            const res = v.videoWidth + "x" + v.videoHeight;
             const combined = `${mbps} | ${fps} fps`;
-            wStats.innerText = `${res} | ${combined}`;
-            fStats.innerText = combined;
-            sStats.innerText = combined;
+            wStats.innerText = `${v.videoWidth}x${v.videoHeight} | ${combined}`;
+            fStats.innerText = combined; sStats.innerText = combined;
         }
     }, 1500);
 
@@ -185,24 +157,40 @@
         document.getElementById('now-playing').innerText = c.name;
         hls.destroy(); hls = new Hls();
         hls.loadSource(c.url); hls.attachMedia(v);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            v.play();
-            if(document.fullscreenElement && screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{});
-        });
+        hls.on(Hls.Events.MANIFEST_PARSED, () => v.play());
         overlay.classList.remove('active');
+        window.scrollTo({ top: 0, behavior: 'smooth' }); // Cuộn lên đầu khi chọn kênh
     }
 
     function init() {
-        const side = document.getElementById('side-list'), grid = document.getElementById('main-grid');
+        const side = document.getElementById('side-list'), container = document.getElementById('category-container');
+        const groups = {};
+
         channels.forEach(c => {
+            // Sidebar
             const sItem = document.createElement('div'); sItem.className = 'side-item';
             sItem.innerHTML = `<img src="${c.logo}">`;
             sItem.onclick = () => play(c); side.appendChild(sItem);
 
-            const gItem = document.createElement('div'); gItem.className = 'grid-item';
-            gItem.innerHTML = `<img src="${c.logo}">`;
-            gItem.onclick = () => play(c); grid.appendChild(gItem);
+            // Grouping for Grid
+            if (!groups[c.cat]) groups[c.cat] = [];
+            groups[c.cat].push(c);
         });
+
+        for (const [catName, chanList] of Object.entries(groups)) {
+            const section = document.createElement('div');
+            section.innerHTML = `<div class="cat-title">${catName}</div>`;
+            const grid = document.createElement('div');
+            grid.className = 'grid';
+            chanList.forEach(c => {
+                const gItem = document.createElement('div'); gItem.className = 'grid-item';
+                gItem.innerHTML = `<img src="${c.logo}">`;
+                gItem.onclick = () => play(c);
+                grid.appendChild(gItem);
+            });
+            section.appendChild(grid);
+            container.appendChild(section);
+        }
         play(channels.find(c => c.short === "VTV1") || channels[0]);
     }
     init();
