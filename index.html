@@ -38,12 +38,21 @@
         .side-item {
             padding: 12px 8px; border-bottom: 1px solid #1a1a1a;
             text-align: center; opacity: 0.5;
-            cursor: pointer; transition: 0.15s;
-            outline: none;
+            cursor: pointer; transition: 0.15s; outline: none;
         }
         .side-item.active { opacity: 1; border-left: 4px solid var(--yellow); background: rgba(255,204,0,0.12); }
         .side-item.focused { opacity: 1; background: var(--focus-bg); transform: scale(1.04); }
         .side-item img { max-width: 90%; max-height: 42px; object-fit: contain; pointer-events: none; display: block; margin: auto; }
+
+        /* Stats — luôn hiện khi overlay active */
+        #stats {
+            position: absolute; top: 10px; right: 10px;
+            background: rgba(0,0,0,0.65);
+            color: #00ff00; font-family: monospace; font-size: 11px;
+            padding: 4px 8px; border-radius: 5px;
+            pointer-events: none; line-height: 1.6;
+            white-space: nowrap;
+        }
 
         #loading {
             position: absolute; top: 50%; left: 50%;
@@ -62,6 +71,7 @@
     <div id="loading">ĐANG TẢI...</div>
     <div class="controls-overlay" id="ui-overlay">
         <div class="sidebar" id="sidebar-el"></div>
+        <div id="stats">—</div>
     </div>
 </div>
 
@@ -70,9 +80,28 @@ const v       = document.getElementById('main-video');
 const overlay = document.getElementById('ui-overlay');
 const sidebar = document.getElementById('sidebar-el');
 const loader  = document.getElementById('loading');
+const statsEl = document.getElementById('stats');
 
 let hls = new Hls({ manifestLoadingMaxRetry: 10, levelLoadingMaxRetry: 10, fragLoadingMaxRetry: 10 });
 let channels = [], curIdx = 0, uiTimer = null;
+let statsInterval = null, frameCount = 0, fps = 0, lastTs = 0;
+
+// ── FPS counter ─────────────────────────────────────────────
+(function fpsLoop() {
+    if (!v.paused) {
+        frameCount++;
+        const now = performance.now();
+        if (now - lastTs >= 1000) { fps = frameCount; frameCount = 0; lastTs = now; }
+    }
+    requestAnimationFrame(fpsLoop);
+})();
+
+function updateStats() {
+    const level = hls.levels?.[hls.currentLevel] || {};
+    const mbps  = level.bitrate ? (level.bitrate / 1e6).toFixed(1) + ' Mbps' : 'Auto';
+    const res   = v.videoWidth ? `${v.videoWidth}×${v.videoHeight}` : '—';
+    statsEl.innerText = `${res} | ${mbps} | ${fps} fps`;
+}
 
 // ── HLS error recovery ──────────────────────────────────────
 hls.on(Hls.Events.ERROR, (_, d) => {
@@ -90,15 +119,10 @@ function playChannel(idx) {
 
     document.querySelectorAll('.side-item').forEach(el => el.classList.remove('active'));
     const activeEl = sidebar.children[idx];
-    if (activeEl) {
-        activeEl.classList.add('active');
-        activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    }
+    if (activeEl) { activeEl.classList.add('active'); activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
 
     if (Hls.isSupported()) {
-        hls.detachMedia();
-        hls.loadSource(c.url);
-        hls.attachMedia(v);
+        hls.detachMedia(); hls.loadSource(c.url); hls.attachMedia(v);
         hls.once(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => {}));
     } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
         v.src = c.url; v.play().catch(() => {});
@@ -111,6 +135,8 @@ v.addEventListener('playing', () => loader.style.display = 'none');
 function showUI() {
     overlay.classList.add('active');
     setFocus(curIdx);
+    updateStats();
+    if (!statsInterval) statsInterval = setInterval(updateStats, 1000);
     resetHideTimer();
 }
 
@@ -118,6 +144,7 @@ function hideUI() {
     overlay.classList.remove('active');
     clearFocus();
     clearTimeout(uiTimer);
+    clearInterval(statsInterval); statsInterval = null;
 }
 
 function resetHideTimer() {
@@ -129,19 +156,13 @@ function resetHideTimer() {
 function setFocus(idx) {
     document.querySelectorAll('.side-item').forEach(el => el.classList.remove('focused'));
     const el = sidebar.children[idx];
-    if (el) {
-        el.classList.add('focused');
-        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    }
+    if (el) { el.classList.add('focused'); el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
 }
-
-function clearFocus() {
-    document.querySelectorAll('.side-item').forEach(el => el.classList.remove('focused'));
-}
+function clearFocus() { document.querySelectorAll('.side-item').forEach(el => el.classList.remove('focused')); }
 
 // ── Touch / Mouse ───────────────────────────────────────────
 document.getElementById('video-viewport').addEventListener('click', (e) => {
-    if (overlay.contains(e.target) && e.target !== overlay) return; // click vào sidebar item → do nothing here
+    if (overlay.contains(e.target) && e.target !== overlay) return;
     overlay.classList.contains('active') ? hideUI() : showUI();
 });
 
@@ -157,47 +178,28 @@ function tryFullscreen() {
 document.addEventListener('keydown', (e) => {
     const KEYS = { UP: 38, DOWN: 40, LEFT: 37, RIGHT: 39, OK: 13, OK2: 23, BACK: 8, MENU: 18 };
 
-    // BACK / MENU
     if (e.keyCode === KEYS.BACK || e.keyCode === KEYS.MENU) {
         e.preventDefault();
         overlay.classList.contains('active') ? hideUI() : showUI();
         return;
     }
-
-    // Nếu UI chưa hiện → mọi phím đều mở
-    if (!overlay.classList.contains('active')) {
-        e.preventDefault(); showUI(); return;
-    }
+    if (!overlay.classList.contains('active')) { e.preventDefault(); showUI(); return; }
 
     resetHideTimer();
-
     const n = channels.length;
-    if (e.keyCode === KEYS.DOWN) {
-        e.preventDefault();
-        curIdx = (curIdx + 1) % n;        // wrap cuối → đầu
-        setFocus(curIdx);
-    } else if (e.keyCode === KEYS.UP) {
-        e.preventDefault();
-        curIdx = (curIdx - 1 + n) % n;    // wrap đầu → cuối
-        setFocus(curIdx);
-    } else if (e.keyCode === KEYS.OK || e.keyCode === KEYS.OK2 || e.keyCode === KEYS.RIGHT) {
-        e.preventDefault();
-        playChannel(curIdx);
-        hideUI();
-    } else if (e.keyCode === KEYS.LEFT) {
-        e.preventDefault();
-        hideUI();
-    }
+    if (e.keyCode === KEYS.DOWN) { e.preventDefault(); curIdx = (curIdx + 1) % n; setFocus(curIdx); }
+    else if (e.keyCode === KEYS.UP) { e.preventDefault(); curIdx = (curIdx - 1 + n) % n; setFocus(curIdx); }
+    else if (e.keyCode === KEYS.OK || e.keyCode === KEYS.OK2 || e.keyCode === KEYS.RIGHT) { e.preventDefault(); playChannel(curIdx); hideUI(); }
+    else if (e.keyCode === KEYS.LEFT) { e.preventDefault(); hideUI(); }
 });
 
 // ── Init ────────────────────────────────────────────────────
 async function init() {
     try {
-        const res = await fetch('playlist.json');
+        const res  = await fetch('playlist.json');
         const data = await res.json();
         let raw = Object.values(data).flat();
 
-        // THVL1 lên đầu sidebar
         const thvl1 = raw.find(c => c.short === 'THVL1');
         const rest  = raw.filter(c => c.short !== 'THVL1');
         channels = thvl1 ? [thvl1, ...rest] : raw;
@@ -211,11 +213,9 @@ async function init() {
             sidebar.appendChild(el);
         });
 
-        // Phát VTV1 mặc định
         const vtv1Idx = channels.findIndex(c => c.short === 'VTV1');
         playChannel(vtv1Idx >= 0 ? vtv1Idx : 0);
 
-        // Auto fullscreen
         tryFullscreen();
         document.addEventListener('click', tryFullscreen, { once: true });
 
