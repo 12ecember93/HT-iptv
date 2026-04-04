@@ -7,32 +7,44 @@
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/12ecember93/HT-iptv/main/httv.png">
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
-        :root { --yellow: #ffcc00; --focus-bg: rgba(255,255,255,0.25); }
-        * { box-sizing: border-box; }
-        body { margin: 0; padding: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+        :root { --yellow: #ffcc00; --focus-bg: rgba(255,255,255,0.25); --sidebar-w: 163px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        /* Luôn render landscape bất kể máy để dọc hay ngang */
-        @media (orientation: portrait) {
-            body {
-                width: 100vh;
-                height: 100vw;
-                transform: rotate(90deg);
-                transform-origin: bottom left;
-                position: fixed;
-                top: auto;
-                bottom: 0;
-                left: 0;
-                overflow: hidden;
-            }
-            #video-viewport {
-                width: 100vh;
-                height: 100vw;
-            }
+        html, body {
+            width: 100%; height: 100%;
+            background: #000; color: #fff;
+            font-family: sans-serif;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        #video-viewport { position: fixed; inset: 0; width: 100vw; height: 100vh; background: #000; }
-        video { width: 100%; height: 100%; object-fit: contain; display: block; }
+        /* Layout ngang cứng: video chiếm toàn bộ, sidebar overlay lên trên */
+        #app {
+            position: fixed;
+            /* Luôn landscape: width = chiều dài màn hình, height = chiều ngắn */
+            width: max(100vw, 100vh);
+            height: min(100vw, 100vh);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #000;
+        }
 
+        video {
+            position: absolute; inset: 0;
+            width: 100%; height: 100%;
+            object-fit: contain; display: block;
+        }
+
+        #loading {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--yellow); font-weight: bold; font-size: 16px;
+            z-index: 60; text-shadow: 0 0 12px #000;
+            pointer-events: none; display: none;
+        }
+
+        /* Overlay + sidebar */
         .controls-overlay {
             position: absolute; inset: 0;
             background: rgba(0,0,0,0.2);
@@ -43,8 +55,8 @@
 
         .sidebar {
             position: absolute; top: 0; left: 0;
-            width: 130px; height: 100%;
-            background: rgba(10,10,10,0.96);
+            width: var(--sidebar-w); height: 100%;
+            background: rgba(10,10,10,0.97);
             border-right: 1px solid #333;
             overflow-y: auto; overflow-x: hidden;
             transform: translateX(-100%);
@@ -55,39 +67,28 @@
         .controls-overlay.active .sidebar { transform: translateX(0); }
 
         .side-item {
-            padding: 12px 8px; border-bottom: 1px solid #1a1a1a;
+            padding: 14px 10px;
+            border-bottom: 1px solid #1a1a1a;
             text-align: center; opacity: 0.5;
             cursor: pointer; transition: 0.15s; outline: none;
         }
         .side-item.active { opacity: 1; border-left: 4px solid var(--yellow); background: rgba(255,204,0,0.12); }
         .side-item.focused { opacity: 1; background: var(--focus-bg); transform: scale(1.04); }
-        .side-item img { max-width: 90%; max-height: 42px; object-fit: contain; pointer-events: none; display: block; margin: auto; }
+        .side-item img { max-width: 90%; max-height: 50px; object-fit: contain; pointer-events: none; display: block; margin: auto; }
 
-        /* Stats — luôn hiện khi overlay active */
+        /* Stats góc trên phải */
         #stats {
             position: absolute; top: 10px; right: 10px;
             background: rgba(0,0,0,0.65);
             color: #00ff00; font-family: monospace; font-size: 11px;
             padding: 4px 8px; border-radius: 5px;
-            pointer-events: none; line-height: 1.6;
-            white-space: nowrap;
-        }
-
-        #loading {
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%,-50%);
-            color: var(--yellow); font-weight: bold;
-            font-size: 16px; z-index: 60;
-            text-shadow: 0 0 12px #000;
-            pointer-events: none; display: none;
+            pointer-events: none; line-height: 1.6; white-space: nowrap;
         }
     </style>
 </head>
 <body>
-
-<div id="video-viewport">
+<div id="app">
     <video id="main-video" autoplay playsinline webkit-playsinline muted></video>
-
     <div id="loading">ĐANG TẢI...</div>
     <div class="controls-overlay" id="ui-overlay">
         <div class="sidebar" id="sidebar-el"></div>
@@ -101,12 +102,13 @@ const overlay = document.getElementById('ui-overlay');
 const sidebar = document.getElementById('sidebar-el');
 const loader  = document.getElementById('loading');
 const statsEl = document.getElementById('stats');
+const app     = document.getElementById('app');
 
 let hls = new Hls({ manifestLoadingMaxRetry: 10, levelLoadingMaxRetry: 10, fragLoadingMaxRetry: 10 });
-let channels = [], curIdx = 0, uiTimer = null;
-let statsInterval = null, frameCount = 0, fps = 0, lastTs = 0;
+let channels = [], curIdx = 0, uiTimer = null, statsInterval = null;
+let frameCount = 0, fps = 0, lastTs = 0;
 
-// ── FPS counter ─────────────────────────────────────────────
+// ── FPS ─────────────────────────────────────────────────────
 (function fpsLoop() {
     if (!v.paused) {
         frameCount++;
@@ -123,7 +125,7 @@ function updateStats() {
     statsEl.innerText = `${res} | ${mbps} | ${fps} fps`;
 }
 
-// ── HLS error recovery ──────────────────────────────────────
+// ── HLS ─────────────────────────────────────────────────────
 hls.on(Hls.Events.ERROR, (_, d) => {
     if (!d.fatal) return;
     if (d.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
@@ -145,16 +147,18 @@ function playChannel(idx) {
         hls.detachMedia(); hls.loadSource(c.url); hls.attachMedia(v);
         hls.once(Hls.Events.MANIFEST_PARSED, () => {
             v.muted = false;
-            v.play().catch(() => { v.muted = true; v.play(); }); // fallback muted nếu bị chặn
+            v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
         });
     } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-        v.src = c.url; v.play().catch(() => {});
+        v.src = c.url;
+        v.muted = false;
+        v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
     }
 }
 
 v.addEventListener('playing', () => loader.style.display = 'none');
 
-// ── UI show/hide ────────────────────────────────────────────
+// ── UI ──────────────────────────────────────────────────────
 function showUI() {
     overlay.classList.add('active');
     setFocus(curIdx);
@@ -175,7 +179,6 @@ function resetHideTimer() {
     uiTimer = setTimeout(hideUI, 2000);
 }
 
-// ── Focus helper ────────────────────────────────────────────
 function setFocus(idx) {
     document.querySelectorAll('.side-item').forEach(el => el.classList.remove('focused'));
     const el = sidebar.children[idx];
@@ -183,9 +186,9 @@ function setFocus(idx) {
 }
 function clearFocus() { document.querySelectorAll('.side-item').forEach(el => el.classList.remove('focused')); }
 
-// ── Touch / Mouse ───────────────────────────────────────────
-document.getElementById('video-viewport').addEventListener('click', (e) => {
-    if (overlay.contains(e.target) && e.target !== overlay) return;
+// ── Touch / click ───────────────────────────────────────────
+app.addEventListener('click', (e) => {
+    if (sidebar.contains(e.target)) return;
     overlay.classList.contains('active') ? hideUI() : showUI();
 });
 
@@ -197,23 +200,21 @@ function tryFullscreen() {
     if (screen.orientation?.lock) screen.orientation.lock('landscape').catch(() => {});
 }
 
-// ── Keyboard / D-pad ───────────────────────────────────────
+// ── D-pad ───────────────────────────────────────────────────
 document.addEventListener('keydown', (e) => {
-    const KEYS = { UP: 38, DOWN: 40, LEFT: 37, RIGHT: 39, OK: 13, OK2: 23, BACK: 8, MENU: 18 };
-
-    if (e.keyCode === KEYS.BACK || e.keyCode === KEYS.MENU) {
+    const K = { UP:38, DOWN:40, LEFT:37, RIGHT:39, OK:13, OK2:23, BACK:8, MENU:18 };
+    if (e.keyCode === K.BACK || e.keyCode === K.MENU) {
         e.preventDefault();
         overlay.classList.contains('active') ? hideUI() : showUI();
         return;
     }
     if (!overlay.classList.contains('active')) { e.preventDefault(); showUI(); return; }
-
     resetHideTimer();
     const n = channels.length;
-    if (e.keyCode === KEYS.DOWN) { e.preventDefault(); curIdx = (curIdx + 1) % n; setFocus(curIdx); }
-    else if (e.keyCode === KEYS.UP) { e.preventDefault(); curIdx = (curIdx - 1 + n) % n; setFocus(curIdx); }
-    else if (e.keyCode === KEYS.OK || e.keyCode === KEYS.OK2 || e.keyCode === KEYS.RIGHT) { e.preventDefault(); playChannel(curIdx); hideUI(); }
-    else if (e.keyCode === KEYS.LEFT) { e.preventDefault(); hideUI(); }
+    if (e.keyCode === K.DOWN)  { e.preventDefault(); curIdx = (curIdx+1)%n; setFocus(curIdx); }
+    else if (e.keyCode === K.UP) { e.preventDefault(); curIdx = (curIdx-1+n)%n; setFocus(curIdx); }
+    else if ([K.OK, K.OK2, K.RIGHT].includes(e.keyCode)) { e.preventDefault(); playChannel(curIdx); hideUI(); }
+    else if (e.keyCode === K.LEFT) { e.preventDefault(); hideUI(); }
 });
 
 // ── Init ────────────────────────────────────────────────────
@@ -224,8 +225,7 @@ async function init() {
         let raw = Object.values(data).flat();
 
         const thvl1 = raw.find(c => c.short === 'THVL1');
-        const rest  = raw.filter(c => c.short !== 'THVL1');
-        channels = thvl1 ? [thvl1, ...rest] : raw;
+        channels = thvl1 ? [thvl1, ...raw.filter(c => c.short !== 'THVL1')] : raw;
 
         channels.forEach((c, i) => {
             const el = document.createElement('div');
