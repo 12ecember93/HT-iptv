@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TV WEB ENGINE (DRM + AUTOPLAY)</title>
+    <title>TV360 DRM ENGINE</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.ui.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/controls.min.css">
     <style>
@@ -11,17 +11,10 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { width: 100%; height: 100%; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; -webkit-tap-highlight-color: transparent; }
         
-        #app {
-            position: absolute;
-            top: 50%; left: 50%;
-            background: #000;
-            overflow: hidden;
-        }
+        #app { position: absolute; top: 50%; left: 50%; background: #000; overflow: hidden; }
         video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
         
         #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--yellow); font-weight: bold; font-size: 16px; z-index: 60; text-shadow: 0 0 12px #000; pointer-events: none; display: none; }
-        
-        /* Nút gợi ý bật tiếng chống trình duyệt chặn âm thanh */
         #unmute-hint { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(255, 204, 0, 0.9); color: #000; padding: 10px 20px; font-weight: bold; border-radius: 20px; font-size: 13px; z-index: 55; pointer-events: none; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.5); animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
 
@@ -32,10 +25,9 @@
         .controls-overlay.active .sidebar { transform: translateX(0); }
         .side-item { padding: 14px 10px; border-bottom: 1px solid #1a1a1a; text-align: center; opacity: 0.5; cursor: pointer; transition: 0.15s; outline: none; }
         .side-item.active { opacity: 1; border-left: 4px solid var(--yellow); background: rgba(255,204,0,0.12); }
-        .side-item.focused { opacity: 1; background: var(--focus-bg); transform: scale(1.04); }
         .side-item img { max-width: 90%; max-height: 50px; object-fit: contain; pointer-events: none; display: block; margin: auto; }
         #stats { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.65); color: #00ff00; font-family: monospace; font-size: 11px; padding: 4px 8px; border-radius: 5px; pointer-events: none; line-height: 1.6; white-space: nowrap; z-index: 55; }
-        .shaka-controls-container { display: none !important; } /* Tắt UI gốc của Shaka */
+        .shaka-controls-container { display: none !important; }
     </style>
 </head>
 <body>
@@ -62,8 +54,11 @@ let player = null;
 let channels = [], curIdx = 0, uiTimer = null, statsInterval = null;
 let frameCount = 0, fps = 0, lastTs = 0;
 
-// LINK PHÁT MỒI KÊNH VTV1 (LINK MỚI BỒ ĐƯA TRONG LIST)
-const DEFAULT_CHANNEL_URL = "https://live.fptplay53.net/fnxch2/vtv1hd_abr.smil/chunklist.m3u8";
+// MỒI SẴN KÊNH TV360+1 ĐỂ VÀO LÀ KHỞI ĐỘNG LUÔN
+const DEFAULT_CHANNEL = {
+    url: "https://sgclient.duckdns.org/source/tv360.mpd?id=2554",
+    drm_key: { "47404f622db3536c867b2545581aadb4": "9fbdc12cfe74564fd4329baa6a6d1968" }
+};
 
 function autoResponsiveLandscape() {
     const w = window.innerWidth; const h = window.innerHeight;
@@ -97,60 +92,57 @@ async function initPlayer() {
     if (shaka.polyfill && shaka.polyfill.installAll) shaka.polyfill.installAll();
     player = new shaka.Player(v);
     
+    // BIỆN PHÁP CHÍ MẠNG: FIX LỖI "ĐANG TẢI..." DO THIẾU USER-AGENT CỦA SERVER TV360
+    player.getNetworkingEngine().registerRequestFilter((type, request) => {
+        // Ép trình duyệt gửi kèm User-Agent giả lập Android Dalvik để bẻ khóa chặn luồng
+        request.headers['X-Requested-With'] = 'com.viettel.tv360';
+        request.headers['User-Agent'] = 'Dalvik/2.1.0 (Linux; U; Android 10; SM-G975F Build/QP1A.190711.020)';
+    });
+
     v.addEventListener('playing', () => {
         loader.style.display = 'none';
-        // Nếu đang phát ngầm mà tiếng bị câm (do luật trình duyệt) thì hiện thông báo nhắc click
         if (v.muted) unmuteHint.style.display = 'block';
     });
     v.addEventListener('waiting', () => loader.style.display = 'block');
 }
 
-async function directPlay(channelObjOrUrl) {
+async function directPlay(channelObj) {
     if (!player) return;
     loader.style.display = 'block';
 
     try {
-        // Dọn dẹp token/khóa DRM cũ trước khi tải kênh mới
-        player.configure({ drm: { clearKeys: {} } });
-
-        if (typeof channelObjOrUrl === 'string') {
-            await player.load(channelObjOrUrl);
-        } else {
-            // Nếu có cấu hình mã khóa ClearKey DRM thì nhét vào đầu giải mã phần cứng trình duyệt
-            if (channelObjOrUrl.drm_key) {
-                player.configure({ drm: { clearKeys: channelObjOrUrl.drm_key } });
+        // Cấu hình mã khóa bẻ khóa ClearKey DRM phần cứng
+        player.configure({
+            drm: {
+                clearKeys: channelObj.drm_key
             }
-            await player.load(channelObjOrUrl.url);
-        }
+        });
+        await player.load(channelObj.url);
         v.play().catch(() => {});
-    } catch (e) { console.error('Play lỗi:', e); }
+    } catch (e) { 
+        console.error('Lỗi nạp kênh:', e);
+        loader.innerText = "LỖI GIẢI MÃ DRM";
+    }
 }
 
 function playChannel(idx) {
     if (idx < 0 || idx >= channels.length) return;
     curIdx = idx;
-    loader.innerText = "ĐANG TẢI...";
+    loader.innerText = "ĐANG TẢI TV360...";
     document.querySelectorAll('.side-item').forEach(el => el.classList.remove('active'));
-    const activeEl = sidebar.children[idx];
-    if (activeEl) { activeEl.classList.add('active'); activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+    if (sidebar.children[idx]) sidebar.children[idx].classList.add('active');
     directPlay(channels[idx]);
 }
 
 function showUI() {
-    overlay.classList.add('active'); setFocus(curIdx); updateStats();
+    overlay.classList.add('active'); updateStats();
     if (!statsInterval) statsInterval = setInterval(updateStats, 1000); resetHideTimer();
 }
-function hideUI() { overlay.classList.remove('active'); clearFocus(); clearTimeout(uiTimer); clearInterval(statsInterval); statsInterval = null; }
+function hideUI() { overlay.classList.remove('active'); clearTimeout(uiTimer); clearInterval(statsInterval); statsInterval = null; }
 function resetHideTimer() { clearTimeout(uiTimer); uiTimer = setTimeout(hideUI, 2000); }
-function setFocus(idx) { document.querySelectorAll('.side-item').forEach(el => el.classList.remove('focused')); const el = sidebar.children[idx]; if (el) { el.classList.add('focused'); el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } }
-function clearFocus() { document.querySelectorAll('.side-item').forEach(el => el.classList.remove('focused')); }
 
-// NGƯỜI DÙNG CLICK VÀO WEB PHÁT LÀ MỞ TIẾNG LUÔN
 app.addEventListener('click', (e) => {
-    if (v.muted) {
-        v.muted = false;
-        unmuteHint.style.display = 'none';
-    }
+    if (v.muted) { v.muted = false; unmuteHint.style.display = 'none'; }
     if (sidebar.contains(e.target)) return;
     overlay.classList.contains('active') ? hideUI() : showUI();
 });
@@ -159,10 +151,7 @@ function parseAndBuildMenu(textScript) {
     try {
         const jsonString = textScript.substring(textScript.indexOf('{'), textScript.lastIndexOf('}') + 1);
         const data = JSON.parse(jsonString);
-        let raw = Object.values(data).flat();
-
-        const thvl1 = raw.find(c => c.short === 'THVL1');
-        channels = thvl1 ? [thvl1, ...raw.filter(c => c.short !== 'THVL1')] : raw;
+        channels = Object.values(data).flat();
 
         sidebar.innerHTML = "";
         channels.forEach((c, i) => {
@@ -173,10 +162,7 @@ function parseAndBuildMenu(textScript) {
             sidebar.appendChild(el);
         });
 
-        const vtv1Idx = channels.findIndex(c => c.short === 'VTV1');
-        curIdx = vtv1Idx >= 0 ? vtv1Idx : 0;
-        if (sidebar.children[curIdx]) sidebar.children[curIdx].classList.add('active');
-
+        if (sidebar.children[0]) sidebar.children[0].classList.add('active');
     } catch(e) { console.log("Lỗi đồng bộ menu", e); }
 }
 
@@ -184,17 +170,15 @@ async function init() {
     autoResponsiveLandscape();
     await initPlayer();
 
-    // Khởi động mồi kênh ngay lập tức trên web sau 100ms
     setTimeout(() => {
-        directPlay(DEFAULT_CHANNEL_URL);
+        // Đập thẳng luồng TV360+1 ClearKey có kèm injector header Dalvik
+        directPlay(DEFAULT_CHANNEL);
 
-        // Đọc thẳng file playlist.js từ link GitHub httv sạch lỗi của bồ
+        // Đọc danh sách từ github để cập nhật menu phụ
         fetch('https://raw.githubusercontent.com/12ecember93/httv/main/playlist.js')
             .then(res => res.text())
             .then(text => parseAndBuildMenu(text))
-            .catch(() => {
-                console.log("Không kết nối được GitHub, kiểm tra lại link!");
-            });
+            .catch(() => {});
     }, 100);
 }
 
