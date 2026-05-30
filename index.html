@@ -1,59 +1,54 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TV360 FIXED DRM ENGINE</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.ui.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/controls.min.css">
+    <title>TV360 WEB BYPASS ENGINE</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.12/hls.min.js"></script>
     <style>
         :root { --yellow: #ffcc00; --focus-bg: rgba(255,255,255,0.25); --sidebar-w: 163px; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { width: 100%; height: 100%; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+        html, body { width: 100%; height: 100%; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
         #app { position: absolute; top: 50%; left: 50%; background: #000; overflow: hidden; }
         video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
-        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--yellow); font-weight: bold; font-size: 16px; z-index: 60; text-shadow: 0 0 12px #000; pointer-events: none; display: none; }
-        #unmute-hint { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(255, 204, 0, 0.9); color: #000; padding: 10px 20px; font-weight: bold; border-radius: 20px; font-size: 13px; z-index: 55; pointer-events: none; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.5); animation: pulse 1.5s infinite; }
+        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--yellow); font-weight: bold; font-size: 16px; z-index: 60; text-shadow: 0 0 12px #000; display: none; }
+        #unmute-hint { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(255, 204, 0, 0.9); color: #000; padding: 10px 20px; font-weight: bold; border-radius: 20px; font-size: 13px; z-index: 55; pointer-events: none; display: none; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
         .controls-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.2); opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 50; }
         .controls-overlay.active { opacity: 1; pointer-events: auto; }
-        .sidebar { position: absolute; top: 0; left: 0; width: var(--sidebar-w); height: 100%; background: rgba(10,10,10,0.97); border-right: 1px solid #333; overflow-y: auto; overflow-x: hidden; transform: translateX(-100%); transition: transform 0.2s; scrollbar-width: none; }
-        .sidebar::-webkit-scrollbar { display: none; }
+        .sidebar { position: absolute; top: 0; left: 0; width: var(--sidebar-w); height: 100%; background: rgba(10,10,10,0.97); border-right: 1px solid #333; overflow-y: auto; overflow-x: hidden; transform: translateX(-100%); transition: transform 0.2s; }
         .controls-overlay.active .sidebar { transform: translateX(0); }
-        .side-item { padding: 14px 10px; border-bottom: 1px solid #1a1a1a; text-align: center; opacity: 0.5; cursor: pointer; transition: 0.15s; outline: none; }
+        .side-item { padding: 14px 10px; border-bottom: 1px solid #1a1a1a; text-align: center; opacity: 0.5; cursor: pointer; }
         .side-item.active { opacity: 1; border-left: 4px solid var(--yellow); background: rgba(255,204,0,0.12); }
-        .side-item img { max-width: 90%; max-height: 50px; object-fit: contain; pointer-events: none; display: block; margin: auto; }
-        #stats { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.65); color: #00ff00; font-family: monospace; font-size: 11px; padding: 4px 8px; border-radius: 5px; pointer-events: none; line-height: 1.6; white-space: nowrap; z-index: 55; }
-        .shaka-controls-container { display: none !important; }
+        .side-item img { max-width: 90%; max-height: 50px; object-fit: contain; display: block; margin: auto; }
     </style>
 </head>
 <body>
-<div id="app" data-shaka-player-container>
+<div id="app">
     <video id="main-video" autoplay playsinline webkit-playsinline muted></video>
-    <div id="loading">ĐANG TẢI...</div>
+    <div id="loading">ĐANG KẾT NỐI LUỒNG...</div>
     <div id="unmute-hint">CHẠM MÀN HÌNH ĐỂ BẬT TIẾNG 🔊</div>
     <div class="controls-overlay" id="ui-overlay">
         <div class="sidebar" id="sidebar-el"></div>
-        <div id="stats">—</div>
     </div>
 </div>
 
 <script>
-const v           = document.getElementById('main-video');
-const overlay     = document.getElementById('ui-overlay');
-const sidebar     = document.getElementById('sidebar-el');
-const loader      = document.getElementById('loading');
-const statsEl     = document.getElementById('stats');
-const app         = document.getElementById('app');
-const unmuteHint  = document.getElementById('unmute-hint');
+const v          = document.getElementById('main-video');
+const overlay    = document.getElementById('ui-overlay');
+const sidebar    = document.getElementById('sidebar-el');
+const loader     = document.getElementById('loading');
+const app        = document.getElementById('app');
+const unmuteHint = document.getElementById('unmute-hint');
 
-let player = null;
-let channels = [], curIdx = 0, uiTimer = null, statsInterval = null;
-let frameCount = 0, fps = 0, lastTs = 0;
+let hls = null;
+let channels = [], curIdx = 0, uiTimer = null;
 
-// ĐƯỜNG DẪN ĐẾN FILE M3U TRÊN GITHUB CỦA BỒ
-const M3U_URL = "https://raw.githubusercontent.com/12ecember93/httv/main/playlist.m3u";
+// LINK FILE M3U TRÊN GITHUB CỦA BỒ
+const M3U_URL = "https://raw.githubusercontent.com/12ecember93/HT-iptv/main/playlist.m3u";
+
+// CỔNG TRUNG GIAN GIẢI CỨU CORS VÀ RE-HEADER CHO TRÌNH DUYỆT
+const PROXY_URL = "https://cors-anywhere.herokuapp.com/"; 
 
 function autoResponsiveLandscape() {
     const w = window.innerWidth; const h = window.innerHeight;
@@ -63,42 +58,6 @@ function autoResponsiveLandscape() {
 autoResponsiveLandscape();
 window.addEventListener('resize', autoResponsiveLandscape);
 
-(function fpsLoop() {
-    if (!v.paused) { frameCount++; const now = performance.now(); if (now - lastTs >= 1000) { fps = frameCount; frameCount = 0; lastTs = now; } }
-    requestAnimationFrame(fpsLoop);
-})();
-
-function updateStats() {
-    if (!player) return; const stats = player.getStats();
-    const res = v.videoWidth ? `${v.videoWidth}×${v.videoHeight}` : '—';
-    const mbps = stats && stats.estimatedBandwidth ? (stats.estimatedBandwidth / 1e6).toFixed(1) + ' Mbps' : 'Auto';
-    statsEl.innerText = `${res} | ${mbps} | ${fps} fps`;
-}
-
-async function initPlayer() {
-    if (shaka.polyfill && shaka.polyfill.installAll) shaka.polyfill.installAll();
-    player = new shaka.Player(v);
-    
-    // Inject Header vượt rào cản luồng TV360
-    player.getNetworkingEngine().registerRequestFilter((type, request) => {
-        request.headers['X-Requested-With'] = 'com.viettel.tv360';
-        request.headers['User-Agent'] = 'Dalvik/2.1.0 (Linux; U; Android 10; SM-G975F Build/QP1A.190711.020)';
-    });
-
-    v.addEventListener('playing', () => { loader.style.display = 'none'; if (v.muted) unmuteHint.style.display = 'block'; });
-    v.addEventListener('waiting', () => loader.style.display = 'block');
-}
-
-// HÀM CHUYỂN ĐỔI CHUỖI HEX SANG BASE64URL ĐỂ TRÌNH DUYỆT CHỊU GIẢI MÃ
-function hexToBase64URL(hex) {
-    let str = "";
-    for (let i = 0; i < hex.length; i += 2) {
-        str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
-    }
-    return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-// BỘ PARSER M3U CÓ CONVERT KEY SANG CHUẨN WEB BẮT BUỘC
 function parseM3U(text) {
     const lines = text.split('\n');
     const list = [];
@@ -114,16 +73,6 @@ function parseM3U(text) {
             currentItem.logo = logoMatch ? logoMatch[1] : '';
             const nameParts = line.split(',');
             currentItem.name = nameParts.length > 1 ? nameParts[nameParts.length - 1].trim() : 'TV360';
-        } else if (line.startsWith('#KODIPROP:inputstream.adaptive.license_key=')) {
-            const keyRaw = line.split('=')[1].trim();
-            const keyParts = keyRaw.split(':');
-            if (keyParts.length === 2 && currentItem) {
-                // Ép buộc convert sang cấu trúc ClearKey dạng Base64URL dành riêng cho Web
-                const b64KeyId = hexToBase64URL(keyParts[0]);
-                const b64KeyVal = hexToBase64URL(keyParts[1]);
-                currentItem.drm_key = {};
-                currentItem.drm_key[b64KeyId] = b64KeyVal;
-            }
         } else if (line.startsWith('http')) {
             if (currentItem) {
                 currentItem.url = line;
@@ -135,37 +84,51 @@ function parseM3U(text) {
     return list;
 }
 
-async function directPlay(channelObj) {
-    if (!player || !channelObj) return;
+function directPlay(url) {
     loader.style.display = 'block';
-    try {
-        // Reset DRM cũ
-        player.configure({ drm: { clearKeys: {} } });
-        
-        if (channelObj.drm_key) {
-            player.configure({
-                drm: { clearKeys: channelObj.drm_key }
-            });
-        }
-        await player.load(channelObj.url);
-        v.play().catch(() => {});
-    } catch (e) { 
-        console.error('Lỗi phát:', e); 
-        loader.innerText = "LỖI GIẢI MÃ DRM (CẦN HTTPS)"; 
+    
+    // Đập tan lỗi CORS và lỗi User-Agent bằng cách mượn cổng Proxy xử lý luồng mạng
+    // Note: Nếu proxy công cộng bị nghẽn, bồ có thể đổi sang proxy cá nhân của bồ
+    let finalUrl = url.includes('duckdns.org') ? PROXY_URL + url : url;
+
+    if (hls) { hls.destroy(); }
+
+    if (Hls.isSupported()) {
+        hls = new Hls({
+            xhrSetup: function (xhr, url) {
+                // Ép Header trực tiếp thông qua cơ chế XHR của Hls.js trước khi đổ vào thẻ Video
+                if(url.includes('duckdns.org') || url.includes('tv360')){
+                    xhr.setRequestHeader('X-Requested-With', 'com.viettel.tv360');
+                }
+            }
+        });
+        hls.loadSource(finalUrl);
+        hls.attachMedia(v);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => { v.play().catch(()=>{}); });
+        hls.on(Hls.Events.ERROR, function (event, data) {
+            if (data.fatal) { console.error("Lỗi luồng HLS:", data); loader.innerText = "LỖI KẾT NỐI LUỒNG"; }
+        });
+    } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+        // Hỗ trợ trực tiếp cho trình duyệt Safari trên iPhone
+        v.src = finalUrl;
+        v.addEventListener('loadedmetadata', () => { v.play().catch(()=>{}); });
     }
 }
 
+v.addEventListener('playing', () => { loader.style.display = 'none'; if (v.muted) unmuteHint.style.display = 'block'; });
+v.addEventListener('waiting', () => loader.style.display = 'block');
+
 function playChannel(idx) {
     if (idx < 0 || idx >= channels.length) return;
-    curIdx = idx; loader.innerText = "ĐANG TẢI...";
+    curIdx = idx; loader.innerText = "ĐANG KẾT NỐI...";
     document.querySelectorAll('.side-item').forEach(el => el.classList.remove('active'));
     if (sidebar.children[idx]) sidebar.children[idx].classList.add('active');
-    directPlay(channels[idx]);
+    directPlay(channels[idx].url);
 }
 
-function showUI() { overlay.classList.add('active'); updateStats(); if (!statsInterval) statsInterval = setInterval(updateStats, 1000); resetHideTimer(); }
-function hideUI() { overlay.classList.remove('active'); clearTimeout(uiTimer); clearInterval(statsInterval); statsInterval = null; }
-function resetHideTimer() { clearTimeout(uiTimer); uiTimer = setTimeout(hideUI, 2000); }
+function showUI() { overlay.classList.add('active'); resetHideTimer(); }
+function hideUI() { overlay.classList.remove('active'); clearTimeout(uiTimer); }
+function resetHideTimer() { clearTimeout(uiTimer); uiTimer = setTimeout(hideUI, 2500); }
 
 app.addEventListener('click', (e) => {
     if (v.muted) { v.muted = false; unmuteHint.style.display = 'none'; }
@@ -174,9 +137,6 @@ app.addEventListener('click', (e) => {
 });
 
 async function init() {
-    autoResponsiveLandscape();
-    await initPlayer();
-
     fetch(M3U_URL)
         .then(res => res.text())
         .then(text => {
@@ -192,10 +152,10 @@ async function init() {
 
             if (channels.length > 0) {
                 if (sidebar.children[0]) sidebar.children[0].classList.add('active');
-                directPlay(channels[0]);
+                directPlay(channels[0].url);
             }
         })
-        .catch(err => { loader.innerText = "LỖI KẾT NỐI M3U"; });
+        .catch(() => { loader.innerText = "LỖI TẢI FILE M3U GITHUB"; });
 }
 
 init();
