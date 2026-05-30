@@ -1,4 +1,4 @@
-{
+const playlistData = {
   "VTV": [
     { "name": "VTV1 HD", "short": "VTV1", "logo": "https://images.fptplay53.net/media/channels/icon_channel_vtv1-hd_165657381026.png?w=200&c=0&fmt=webp", "url": "https://live.fptplay53.net/fnxch2/vtv1hd_abr.smil/chunklist.m3u8" },
     { "name": "VTV2 HD", "short": "VTV2", "logo": "https://images.fptplay53.net/media/channels/icon_channel_vtv2-hd_16565576783.png?w=200&c=0&fmt=webp", "url": "https://live.fptplay53.net/fnxch2/vtv2hd_abr.smil/chunklist.m3u8" },
@@ -17,9 +17,8 @@
     { "name": "HTV2 HD", "short": "HTV2", "logo": "https://images.fptplay53.net/media/channels/icon_channel_htv2_165657612334.png?w=200&c=0&fmt=webp", "url": "https://live.fptplay53.net/epzhd1/htv2hd_vhls.smil/chunklist.m3u8" },
     { "name": "HTV3 HD", "short": "HTV3", "logo": "https://images.fptplay53.net/media/channels/icon_channel_htv3_165655827991.png?w=200&c=0&fmt=webp", "url": "https://live.fptplay53.net/epzhd1/htv3_hls.smil/chunklist.m3u8" },
     { "name": "Vietnam Today", "short": "VNT", "logo": "https://images.fptplay53.net/media/channels/OTT/2025/09/05/icon_channel_vietnam-today_175705565938.jpg?w=200&c=0&fmt=webp", "url": "https://live.fptplay53.net/fnxhd1/vntoday_vhls.smil/chunklist_b5000000.m3u8" }
-  ]
-},
-"Sự Kiện TV360": [
+  ],
+  "Sự Kiện TV360": [
     {
       "name": "TV360+1",
       "short": "tv360plus1",
