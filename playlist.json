@@ -18,4 +18,25 @@
     { "name": "HTV3 HD", "short": "HTV3", "logo": "https://images.fptplay53.net/media/channels/icon_channel_htv3_165655827991.png?w=200&c=0&fmt=webp", "url": "https://live.fptplay53.net/epzhd1/htv3_hls.smil/chunklist.m3u8" },
     { "name": "Vietnam Today", "short": "VNT", "logo": "https://images.fptplay53.net/media/channels/OTT/2025/09/05/icon_channel_vietnam-today_175705565938.jpg?w=200&c=0&fmt=webp", "url": "https://live.fptplay53.net/fnxhd1/vntoday_vhls.smil/chunklist_b5000000.m3u8" }
   ]
-}
+},
+"Sự Kiện TV360": [
+    {
+      "name": "TV360+1",
+      "short": "tv360plus1",
+      "logo": "https://img-zlr1.tv360.vn/image1/2026/04/15/22/1776266760359/ba1ca843cd06_480_270.png",
+      "url": "https://sgclient.duckdns.org/source/tv360.mpd?id=2554",
+      "type": "dash",
+      "drm_type": "org.w3.clearkey",
+      "drm_key": { "47404f622db3536c867b2545581aadb4": "9fbdc12cfe74564fd4329baa6a6d1968" }
+    },
+    {
+      "name": "TV360+2",
+      "short": "tv360plus2",
+      "logo": "https://img-ali1.tv360.vn/image1/2024/09/24/21/1727189794311/c4d18ecff9f7_640_360.png",
+      "url": "https://sgclient.duckdns.org/source/tv360.mpd?id=1",
+      "type": "dash",
+      "drm_type": "org.w3.clearkey",
+      "drm_key": { "2c24f672f7715433a83953e74ae564b1": "10a63f9f2ccd81dfc4a05263c2fd1575" }
+    }
+  ]
+};
