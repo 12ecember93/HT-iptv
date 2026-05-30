@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TV M3U DRM ENGINE</title>
+    <title>TV360 FIXED DRM ENGINE</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.ui.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/controls.min.css">
     <style>
@@ -51,7 +52,7 @@ let player = null;
 let channels = [], curIdx = 0, uiTimer = null, statsInterval = null;
 let frameCount = 0, fps = 0, lastTs = 0;
 
-// URL FILE M3U TRÊN GITHUB CỦA BỒ
+// ĐƯỜNG DẪN ĐẾN FILE M3U TRÊN GITHUB CỦA BỒ
 const M3U_URL = "https://raw.githubusercontent.com/12ecember93/httv/main/playlist.m3u";
 
 function autoResponsiveLandscape() {
@@ -78,6 +79,7 @@ async function initPlayer() {
     if (shaka.polyfill && shaka.polyfill.installAll) shaka.polyfill.installAll();
     player = new shaka.Player(v);
     
+    // Inject Header vượt rào cản luồng TV360
     player.getNetworkingEngine().registerRequestFilter((type, request) => {
         request.headers['X-Requested-With'] = 'com.viettel.tv360';
         request.headers['User-Agent'] = 'Dalvik/2.1.0 (Linux; U; Android 10; SM-G975F Build/QP1A.190711.020)';
@@ -87,7 +89,16 @@ async function initPlayer() {
     v.addEventListener('waiting', () => loader.style.display = 'block');
 }
 
-// BỘ PARSER M3U THẦN THÁNH: TỰ CHUYỂN M3U THÀNH DỮ LIỆU ĐẦU PHÁT
+// HÀM CHUYỂN ĐỔI CHUỖI HEX SANG BASE64URL ĐỂ TRÌNH DUYỆT CHỊU GIẢI MÃ
+function hexToBase64URL(hex) {
+    let str = "";
+    for (let i = 0; i < hex.length; i += 2) {
+        str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+    }
+    return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+// BỘ PARSER M3U CÓ CONVERT KEY SANG CHUẨN WEB BẮT BUỘC
 function parseM3U(text) {
     const lines = text.split('\n');
     const list = [];
@@ -99,18 +110,19 @@ function parseM3U(text) {
 
         if (line.startsWith('#EXTINF:')) {
             currentItem = {};
-            // Bóc tách Logo
             const logoMatch = line.match(/tvg-logo="([^"]+)"/);
             currentItem.logo = logoMatch ? logoMatch[1] : '';
-            // Bóc tách Tên kênh
             const nameParts = line.split(',');
-            currentItem.name = nameParts.length > 1 ? nameParts[nameParts.length - 1].trim() : 'Kênh không tên';
+            currentItem.name = nameParts.length > 1 ? nameParts[nameParts.length - 1].trim() : 'TV360';
         } else if (line.startsWith('#KODIPROP:inputstream.adaptive.license_key=')) {
             const keyRaw = line.split('=')[1].trim();
             const keyParts = keyRaw.split(':');
             if (keyParts.length === 2 && currentItem) {
+                // Ép buộc convert sang cấu trúc ClearKey dạng Base64URL dành riêng cho Web
+                const b64KeyId = hexToBase64URL(keyParts[0]);
+                const b64KeyVal = hexToBase64URL(keyParts[1]);
                 currentItem.drm_key = {};
-                currentItem.drm_key[keyParts[0]] = keyParts[1];
+                currentItem.drm_key[b64KeyId] = b64KeyVal;
             }
         } else if (line.startsWith('http')) {
             if (currentItem) {
@@ -127,18 +139,25 @@ async function directPlay(channelObj) {
     if (!player || !channelObj) return;
     loader.style.display = 'block';
     try {
+        // Reset DRM cũ
         player.configure({ drm: { clearKeys: {} } });
+        
         if (channelObj.drm_key) {
-            player.configure({ drm: { clearKeys: channelObj.drm_key } });
+            player.configure({
+                drm: { clearKeys: channelObj.drm_key }
+            });
         }
         await player.load(channelObj.url);
         v.play().catch(() => {});
-    } catch (e) { console.error('Lỗi phát kênh:', e); loader.innerText = "LỖI GIẢI MÃ"; }
+    } catch (e) { 
+        console.error('Lỗi phát:', e); 
+        loader.innerText = "LỖI GIẢI MÃ DRM (CẦN HTTPS)"; 
+    }
 }
 
 function playChannel(idx) {
     if (idx < 0 || idx >= channels.length) return;
-    curIdx = idx; loader.innerText = "ĐANG TẢI M3U...";
+    curIdx = idx; loader.innerText = "ĐANG TẢI...";
     document.querySelectorAll('.side-item').forEach(el => el.classList.remove('active'));
     if (sidebar.children[idx]) sidebar.children[idx].classList.add('active');
     directPlay(channels[idx]);
@@ -158,13 +177,10 @@ async function init() {
     autoResponsiveLandscape();
     await initPlayer();
 
-    // Kéo file m3u từ github về xử lý
     fetch(M3U_URL)
         .then(res => res.text())
         .then(text => {
             channels = parseM3U(text);
-            
-            // Xây dựng giao diện menu bên trái
             sidebar.innerHTML = "";
             channels.forEach((c, i) => {
                 const el = document.createElement('div');
@@ -174,13 +190,12 @@ async function init() {
                 sidebar.appendChild(el);
             });
 
-            // Mồi phát luôn kênh đầu tiên trong file M3U
             if (channels.length > 0) {
                 if (sidebar.children[0]) sidebar.children[0].classList.add('active');
                 directPlay(channels[0]);
             }
         })
-        .catch(err => { console.error("Lỗi tải file M3U:", err); loader.innerText = "LỖI TẢI DANH SÁCH"; });
+        .catch(err => { loader.innerText = "LỖI KẾT NỐI M3U"; });
 }
 
 init();
