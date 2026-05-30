@@ -6,7 +6,6 @@
     <title>TV WEB ENGINE (DRM + AUTOPLAY)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.ui.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/controls.min.css">
-    <script src="playlist.js"></script>
     <style>
         :root { --yellow: #ffcc00; --focus-bg: rgba(255,255,255,0.25); --sidebar-w: 163px; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -22,8 +21,8 @@
         
         #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--yellow); font-weight: bold; font-size: 16px; z-index: 60; text-shadow: 0 0 12px #000; pointer-events: none; display: none; }
         
-        /* Gợi ý bật tiếng cho nền Web */
-        #unmute-hint { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(255, 204, 0, 0.85); color: #000; padding: 8px 16px; font-weight: bold; border-radius: 20px; font-size: 13px; z-index: 55; pointer-events: none; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.5); animation: pulse 1.5s infinite; }
+        /* Nút gợi ý bật tiếng chống trình duyệt chặn âm thanh */
+        #unmute-hint { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(255, 204, 0, 0.9); color: #000; padding: 10px 20px; font-weight: bold; border-radius: 20px; font-size: 13px; z-index: 55; pointer-events: none; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.5); animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
 
         .controls-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.2); opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 50; }
@@ -36,7 +35,7 @@
         .side-item.focused { opacity: 1; background: var(--focus-bg); transform: scale(1.04); }
         .side-item img { max-width: 90%; max-height: 50px; object-fit: contain; pointer-events: none; display: block; margin: auto; }
         #stats { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.65); color: #00ff00; font-family: monospace; font-size: 11px; padding: 4px 8px; border-radius: 5px; pointer-events: none; line-height: 1.6; white-space: nowrap; z-index: 55; }
-        .shaka-controls-container { display: none !important; }
+        .shaka-controls-container { display: none !important; } /* Tắt UI gốc của Shaka */
     </style>
 </head>
 <body>
@@ -63,8 +62,8 @@ let player = null;
 let channels = [], curIdx = 0, uiTimer = null, statsInterval = null;
 let frameCount = 0, fps = 0, lastTs = 0;
 
-// LINK PHÁT MỒI KÊNH VTV1 CŨ
-const DEFAULT_CHANNEL_URL = "https://060524.com/vtv1/index.m3u8";
+// LINK PHÁT MỒI KÊNH VTV1 (LINK MỚI BỒ ĐƯA TRONG LIST)
+const DEFAULT_CHANNEL_URL = "https://live.fptplay53.net/fnxch2/vtv1hd_abr.smil/chunklist.m3u8";
 
 function autoResponsiveLandscape() {
     const w = window.innerWidth; const h = window.innerHeight;
@@ -100,7 +99,7 @@ async function initPlayer() {
     
     v.addEventListener('playing', () => {
         loader.style.display = 'none';
-        // Nếu video đang phát mà vẫn bị câm, hiện dòng nhắc người dùng bật tiếng
+        // Nếu đang phát ngầm mà tiếng bị câm (do luật trình duyệt) thì hiện thông báo nhắc click
         if (v.muted) unmuteHint.style.display = 'block';
     });
     v.addEventListener('waiting', () => loader.style.display = 'block');
@@ -111,11 +110,13 @@ async function directPlay(channelObjOrUrl) {
     loader.style.display = 'block';
 
     try {
+        // Dọn dẹp token/khóa DRM cũ trước khi tải kênh mới
         player.configure({ drm: { clearKeys: {} } });
 
         if (typeof channelObjOrUrl === 'string') {
             await player.load(channelObjOrUrl);
         } else {
+            // Nếu có cấu hình mã khóa ClearKey DRM thì nhét vào đầu giải mã phần cứng trình duyệt
             if (channelObjOrUrl.drm_key) {
                 player.configure({ drm: { clearKeys: channelObjOrUrl.drm_key } });
             }
@@ -144,7 +145,7 @@ function resetHideTimer() { clearTimeout(uiTimer); uiTimer = setTimeout(hideUI, 
 function setFocus(idx) { document.querySelectorAll('.side-item').forEach(el => el.classList.remove('focused')); const el = sidebar.children[idx]; if (el) { el.classList.add('focused'); el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } }
 function clearFocus() { document.querySelectorAll('.side-item').forEach(el => el.classList.remove('focused')); }
 
-// CHẠM VÀO MÀN HÌNH WEB ĐỂ BẬT TIẾNG TỨC THÌ
+// NGƯỜI DÙNG CLICK VÀO WEB PHÁT LÀ MỞ TIẾNG LUÔN
 app.addEventListener('click', (e) => {
     if (v.muted) {
         v.muted = false;
@@ -172,7 +173,7 @@ function parseAndBuildMenu(textScript) {
             sidebar.appendChild(el);
         });
 
-        const vtv1Idx = channels.findIndex(c => c.short === 'VTV1' || c.short === 'tv360plus1');
+        const vtv1Idx = channels.findIndex(c => c.short === 'VTV1');
         curIdx = vtv1Idx >= 0 ? vtv1Idx : 0;
         if (sidebar.children[curIdx]) sidebar.children[curIdx].classList.add('active');
 
@@ -183,19 +184,16 @@ async function init() {
     autoResponsiveLandscape();
     await initPlayer();
 
-    // Web không cần delay 0.5s lâu như Android, quất luôn sau 100ms
+    // Khởi động mồi kênh ngay lập tức trên web sau 100ms
     setTimeout(() => {
         directPlay(DEFAULT_CHANNEL_URL);
 
-        // Kéo dữ liệu từ file playlist.js trên github về đồng bộ
+        // Đọc thẳng file playlist.js từ link GitHub httv sạch lỗi của bồ
         fetch('https://raw.githubusercontent.com/12ecember93/httv/main/playlist.js')
             .then(res => res.text())
             .then(text => parseAndBuildMenu(text))
             .catch(() => {
-                // Dự phòng nếu lỗi mạng github, đọc file local
-                if (typeof playlistData !== 'undefined') {
-                    parseAndBuildMenu(JSON.stringify(playlistData));
-                }
+                console.log("Không kết nối được GitHub, kiểm tra lại link!");
             });
     }, 100);
 }
